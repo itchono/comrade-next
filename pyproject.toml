@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools", "wheel", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "comrade"
+description = "A more refined bot for my needs"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dynamic = ["version"]
+dependencies = ["nextcord[speed]", "python-dotenv"]
+
+[project.urls]
+homepage = "https://github.com/itchono/comrade-next"
+
+[project.scripts]
+comrade = "comrade.bot:main"
+
+[tool.setuptools_scm]
+write_to = "comrade/_version.py"
