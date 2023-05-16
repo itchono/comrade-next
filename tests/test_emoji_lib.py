@@ -1,4 +1,5 @@
-from comrade.lib.standalone.emoji_converter import string_to_regional_indicator, regional_indicator_string_to_string
+from comrade.lib.standalone.emoji_converter import (
+    regional_indicator_string_to_string, string_to_regional_indicator)
 
 
 def test_emoji_fwd_conversion():

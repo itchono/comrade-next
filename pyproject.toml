@@ -9,7 +9,12 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dynamic = ["version"]
-dependencies = ["nextcord[speed]", "python-dotenv", "pymongo", "dnspython"]
+dependencies = [
+    "discord-py-interactions[speedup,voice]",
+    "python-dotenv",
+    "pymongo",
+    "dnspython",
+]
 
 [project.urls]
 homepage = "https://github.com/itchono/comrade-next"

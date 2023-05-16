@@ -1,7 +1,7 @@
 # A simple script to relaunch the bot on command.
 
-import sys
 import os
+import sys
 
 
 def restart_process() -> None:
