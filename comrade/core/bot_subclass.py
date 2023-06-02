@@ -7,6 +7,8 @@ from arrow import Arrow, now
 from interactions import Client, Intents, listen, logger_name
 from pymongo import MongoClient
 
+from comrade.core.const import CLIENT_INIT_KWARGS
+
 
 class Comrade(Client):
     """
@@ -25,20 +27,9 @@ class Comrade(Client):
     logger: logging.Logger = logging.getLogger(logger_name)
     start_time: Arrow = now()
 
-    def __init__(self, timezone: str, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         # Init Interactions.py Bot class
-        intents = (
-            Intents.DEFAULT | Intents.GUILD_MEMBERS | Intents.MESSAGE_CONTENT
-        )
-
-        super().__init__(
-            *args,
-            intents=intents,
-            auto_defer=True,
-            delete_unused_application_cmds=True,
-            sync_ext=True,
-            **kwargs,
-        )
+        super().__init__(*args, **CLIENT_INIT_KWARGS, **kwargs)
 
         # Comrade-specific init
 
@@ -47,7 +38,12 @@ class Comrade(Client):
         try:
             mongokey = kwargs["mongodb_key"]
         except KeyError:
-            mongokey = getenv("MONGODB_KEY")
+            mongokey = getenv("COMRADE_MONGODB_KEY")
+
+        try:
+            timezone = kwargs["timezone"]
+        except KeyError:
+            timezone = getenv("COMRADE_TIMEZONE")
 
         self.db = MongoClient(quote_plus(mongokey))
         self.logger.info("Connected to MongoDB")
@@ -57,7 +53,7 @@ class Comrade(Client):
     async def on_ready(self):
         self.logger.info(f"Logged in as {self.user} ({self.user.id})")
 
-    # Log extension loading
+    # override extension loading to log when an extension is loaded
     def load_extension(
         self, name: str, package: str | None = None, **load_kwargs: Any
     ) -> None:

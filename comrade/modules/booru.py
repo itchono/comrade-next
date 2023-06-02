@@ -1,4 +1,4 @@
-from typing import Type, TypeVar
+from urllib.parse import unquote
 
 import booru as booru_lib
 from interactions import (
@@ -8,27 +8,17 @@ from interactions import (
     OptionType,
     SlashCommandChoice,
     SlashContext,
+    check,
     slash_command,
     slash_option,
 )
 
-# Enumate all booru classes
-booru_type = TypeVar(
-    "booru_type",
-    booru_lib.Danbooru,
-    booru_lib.Gelbooru,
-    booru_lib.Rule34,
-    booru_lib.Safebooru,
-    booru_lib.Xbooru,
-)
-
-# Execute some wizardry using type hints to get a dict of booru names to booru classes
-BOORUS: dict[str, Type[booru_type]] = {
-    t.__name__.lower(): t for t in booru_type.__constraints__
-}
+from comrade.lib.online.checks import nsfw_channel
+from comrade.lib.standalone.booru import BOORUS
 
 
 class Booru(Extension):
+    @check(nsfw_channel)
     @slash_command(description="Gets a random image from a booru")
     @slash_option(
         name="booru",
@@ -45,15 +35,7 @@ class Booru(Extension):
         autocomplete=True,
     )
     async def booru(self, ctx: SlashContext, booru: str, tags: str):
-        if ctx.guild is not None:
-            # Ensure channel is NSFW
-            if not ctx.channel.nsfw:
-                return await ctx.send(
-                    "This command can only be used in NSFW channels",
-                    ephemeral=True,
-                )
-
-        booru_obj = BOORUS[ctx.kwargs["booru"]]()
+        booru_obj = BOORUS[booru]()
         img = booru_lib.resolve(await booru_obj.search(query=tags, gacha=True))
 
         file_url = img["file_url"]
@@ -67,6 +49,15 @@ class Booru(Extension):
 
     @booru.autocomplete("tags")
     async def tags_autocomplete(self, ctx: AutocompleteContext):
+        """
+        Autocomplete handler for the tags option of the booru command.
+
+        Feeds the user suggestions for tags as if they were typing them into
+        the booru's search bar.
+
+        This is done by calling the booru's find_tags method, which returns a
+        list of tags that match the user's input.
+        """
         booru_obj = BOORUS[ctx.kwargs["booru"]]()
 
         if not hasattr(booru_obj, "find_tags"):
@@ -83,7 +74,9 @@ class Booru(Extension):
         if not tags:
             return await ctx.send([f" ".join(the_rest + [most_recent_tag])])
 
-        to_send = [f"{' '.join(the_rest + [tag])}" for tag in tags[:10]]
+        to_send = [
+            f"{' '.join(the_rest + [unquote(tag)])}" for tag in tags[:10]
+        ]
 
         await ctx.send(to_send)
 
