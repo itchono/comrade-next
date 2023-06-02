@@ -3,6 +3,7 @@ from os import getenv
 from typing import Any
 from urllib.parse import quote_plus
 
+from arrow import Arrow, now
 from interactions import Client, Intents, listen, logger_name
 from pymongo import MongoClient
 
@@ -16,11 +17,13 @@ class Comrade(Client):
     - MongoDB connection
     - Configuration store
     - logging
+    - uptime
     """
 
     db: MongoClient
     timezone: str
     logger: logging.Logger = logging.getLogger(logger_name)
+    start_time: Arrow = now()
 
     def __init__(self, timezone: str, *args, **kwargs):
         # Init Interactions.py Bot class

@@ -2,6 +2,7 @@
 import logging
 import os
 import time
+from pathlib import Path
 from typing import Optional
 
 from interactions import logger_name
@@ -34,7 +35,7 @@ class CustomLogger:
 
         # log to file
         file_handler = MakeFileHandler(
-            filename=f"./logs/{output_filename}.log",
+            filepath=Path(f"./logs/{output_filename}.log"),
             encoding="utf-8",
         )
         file_handler.setFormatter(self.formatter)
@@ -50,14 +51,14 @@ class MakeFileHandler(logging.FileHandler):
 
     def __init__(
         self,
-        filename: str,
+        filepath: Path,
         mode: str = "a",
         encoding: Optional[str] = None,
         delay: bool = False,
     ):
         # create the folder if it does not exist already
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-        logging.FileHandler.__init__(self, filename, mode, encoding, delay)
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        logging.FileHandler.__init__(self, filepath, mode, encoding, delay)
 
 
 def init_logging(output_filename: str = logger_name):
