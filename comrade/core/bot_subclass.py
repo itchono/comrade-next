@@ -4,7 +4,7 @@ from typing import Any
 from urllib.parse import quote_plus
 
 from arrow import Arrow, now
-from interactions import Client, Intents, listen, logger_name
+from interactions import MISSING, Client, listen, logger_name
 from pymongo import MongoClient
 
 from comrade.core.const import CLIENT_INIT_KWARGS
@@ -28,8 +28,13 @@ class Comrade(Client):
     start_time: Arrow = now()
 
     def __init__(self, *args, **kwargs):
+        if (debug_scope := getenv("COMRADE_DEBUG_SCOPE")) is None:
+            debug_scope = MISSING
+
         # Init Interactions.py Bot class
-        super().__init__(*args, **CLIENT_INIT_KWARGS, **kwargs)
+        super().__init__(
+            *args, debug_scope=debug_scope, **CLIENT_INIT_KWARGS, **kwargs
+        )
 
         # Comrade-specific init
 

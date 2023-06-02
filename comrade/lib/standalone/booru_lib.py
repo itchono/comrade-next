@@ -1,14 +1,14 @@
 from typing import Type
 
-import booru as booru_lib
+import booru
 
 # Create a type alias that can be any of the booru classes
 BooruType = (
-    booru_lib.Danbooru
-    | booru_lib.Gelbooru
-    | booru_lib.Rule34
-    | booru_lib.Safebooru
-    | booru_lib.Xbooru
+    booru.Danbooru
+    | booru.Gelbooru
+    | booru.Rule34
+    | booru.Safebooru
+    | booru.Xbooru
 )
 # Execute some wizardry using type hints to get a dict of booru names to booru classes
 BOORUS: dict[str, Type[BooruType]] = {

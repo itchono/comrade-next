@@ -1,8 +1,8 @@
-import booru as booru_lib
+import booru
 
-from comrade.lib.standalone.booru import BOORUS
+from comrade.lib.standalone.booru_lib import BOORUS
 
 
 def test_booru_dict():
-    assert BOORUS["danbooru"] == booru_lib.Danbooru
-    assert BOORUS["gelbooru"] == booru_lib.Gelbooru
+    assert BOORUS["danbooru"] == booru.Danbooru
+    assert BOORUS["gelbooru"] == booru.Gelbooru
