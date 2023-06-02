@@ -1,12 +1,13 @@
-'''
+"""
 Context menu and command to set reminders.
-'''
+"""
 
-from nextcord.ext import commands
+from interactions import Extension, slash_command
 
 
-class Reminders(commands.Cog):
+class Reminders(Extension):
+    pass
 
 
 def setup(bot):
-    bot.add_cog(Reminders(bot))
+    Reminders(bot)

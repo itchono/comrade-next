@@ -10,10 +10,13 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 dynamic = ["version"]
 dependencies = [
-    "discord-py-interactions[speedup,voice]",
+    "discord-py-interactions[speedup,voice,jurigged]",
     "python-dotenv",
     "pymongo",
     "dnspython",
+    "beautifulsoup4",
+    "pydub",
+    "arrow"
 ]
 
 [project.urls]
@@ -24,3 +27,15 @@ comrade = "comrade.bot:main"
 
 [tool.setuptools_scm]
 write_to = "comrade/_version.py"
+
+[tool.setuptools]
+packages = ["comrade"]
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 80
+
+[tool.pytest.ini_options]
+filterwarnings = ["ignore::DeprecationWarning"]

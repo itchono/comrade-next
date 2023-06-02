@@ -11,11 +11,19 @@ env_path = Path(__file__).parent.parent / ".env"
 dotenv.load_dotenv(dotenv_path=env_path)
 
 
-bot = Comrade()
-
-
 def main():
-    init_logging()
+    init_logging("comrade")
+
+    bot = Comrade(timezone=getenv("TIMEZONE"))
+
+    # Load all extensions in the comrade/modules directory
+    for module in (Path(__file__).parent / "modules").glob("*.py"):
+        if module.stem == "__init__":
+            continue
+        bot.load_extension(f"comrade.modules.{module.stem}")
+
+    bot.load_extension("interactions.ext.jurigged")
+
     bot.start(getenv("TOKEN"))
 
 

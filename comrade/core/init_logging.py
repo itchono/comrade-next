@@ -23,7 +23,7 @@ class CustomLogger:
         # Make sure the logs folder exists
         os.makedirs("./logs", exist_ok=True)
 
-    def make_logger(self, log_name: str):
+    def make_logger(self, log_name: str, output_filename: str):
         logger = logging.getLogger(log_name)
         logger.setLevel(logging.INFO)
 
@@ -34,11 +34,11 @@ class CustomLogger:
 
         # log to file
         file_handler = MakeFileHandler(
-            filename=f"./logs/{log_name}.log",
+            filename=f"./logs/{output_filename}.log",
             encoding="utf-8",
         )
         file_handler.setFormatter(self.formatter)
-        file_handler.setLevel(logging.ERROR)
+        file_handler.setLevel(logging.INFO)
 
         # add bother handlers
         logger.addHandler(console_handler)
@@ -60,9 +60,9 @@ class MakeFileHandler(logging.FileHandler):
         logging.FileHandler.__init__(self, filename, mode, encoding, delay)
 
 
-def init_logging():
+def init_logging(output_filename: str = logger_name):
     # Initialize formatter
     logger = CustomLogger()
 
     # Initialize logging for exceptions
-    logger.make_logger(logger_name)
+    logger.make_logger(logger_name, output_filename)
