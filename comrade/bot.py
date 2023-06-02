@@ -2,6 +2,7 @@ from os import getenv
 from pathlib import Path
 
 import dotenv
+from interactions.client.const import CLIENT_FEATURE_FLAGS
 
 from comrade.core.bot_subclass import Comrade
 from comrade.core.init_logging import init_logging
@@ -15,6 +16,9 @@ def main():
     init_logging("comrade")
 
     bot = Comrade(timezone=getenv("TIMEZONE"))
+
+    # Temp workaround for discord API image upload bug
+    CLIENT_FEATURE_FLAGS["FOLLOWUP_INTERACTIONS_FOR_IMAGES"] = True
 
     # Load all extensions in the comrade/modules directory
     for module in (Path(__file__).parent / "modules").glob("*.py"):
