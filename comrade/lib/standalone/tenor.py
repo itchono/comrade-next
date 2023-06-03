@@ -1,5 +1,6 @@
 import aiohttp
 import bs4
+import orjson
 
 
 async def tenor_link_to_gif(link: str) -> str:
@@ -20,7 +21,7 @@ async def tenor_link_to_gif(link: str) -> str:
     if not link.startswith("https://tenor.com/view/"):
         raise ValueError("Link is not a Tenor link")
 
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(json_serialize=orjson.dumps) as session:
         async with session.get(link) as response:
             html = await response.text()
 
