@@ -23,7 +23,6 @@ class Maintainence(Extension):
         await ctx.send("Restarting...", ephemeral=True)
         restart_process()
 
-    @is_owner()
     @slash_command(description="Reruns pip install -e . --upgrade")
     async def reinstall(self, ctx: SlashContext):
         await ctx.defer(ephemeral=True)
@@ -33,7 +32,6 @@ class Maintainence(Extension):
         output_log = update_packages()
         await ctx.send(f"```...\n{output_log[-1900:]}\n```", ephemeral=True)
 
-    @is_owner()
     @slash_command(description="Pulls the latest changes from the git repo")
     @slash_option(
         name="branch",
