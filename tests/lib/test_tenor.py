@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from comrade.lib.standalone.tenor import tenor_link_to_gif
+from comrade.lib.tenor import tenor_link_to_gif
 
 
 @pytest.mark.parametrize(

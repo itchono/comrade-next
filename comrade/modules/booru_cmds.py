@@ -14,8 +14,8 @@ from interactions import (
 from interactions.api.events import MessageCreate
 from orjson import loads
 
-from comrade.lib.online.checks import nsfw_channel
-from comrade.lib.standalone.booru_lib import BOORUS, BooruSession
+from comrade.lib.booru_lib import BOORUS, BooruSession
+from comrade.lib.checks import nsfw_channel
 
 
 class Booru(Extension):

@@ -1,6 +1,6 @@
 import booru
 
-from comrade.lib.standalone.booru_lib import BOORUS
+from comrade.lib.booru_lib import BOORUS
 
 
 def test_booru_dict():

@@ -6,7 +6,7 @@ import booru
 from interactions import Embed
 from orjson import loads
 
-from comrade.lib.standalone.markdown_utils import escape_md
+from comrade.lib.markdown_utils import escape_md
 
 # Create a type alias that can be any of the booru classes
 BooruType = (
