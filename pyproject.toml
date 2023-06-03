@@ -16,7 +16,8 @@ dependencies = [
     "dnspython",
     "beautifulsoup4",
     "pydub",
-    "arrow"
+    "arrow",
+    "booru"
 ]
 
 [project.urls]

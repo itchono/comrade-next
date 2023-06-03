@@ -12,17 +12,39 @@ def restart_process() -> None:
     os.execv(sys.argv[0], sys.argv)
 
 
-def update_packages() -> None:
+def update_packages() -> str:
     """
     Re-installs the bot package
 
     (i.e. pip install -e . --upgrade)
+
+    (and returns the output of the command)
     """
-    subprocess.run(["pip", "install", "-e", ".", "--upgrade"], check=True)
+    return subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-e", ".", "--upgrade"],
+        capture_output=True,
+        check=True,
+    ).stdout.decode()
 
 
-def pull_repo() -> None:
+def pull_repo(branch: str = "main") -> None:
     """
     Pulls the latest changes from the git repo
+
+    Parameters
+    ----------
+    branch : str
+        The branch to pull from, defaults to "main"
+
     """
+    current_branch = (
+        subprocess.run(
+            ["git", "branch", "--show-current"], capture_output=True, check=True
+        )
+        .stdout.decode()
+        .strip()
+    )
+    if current_branch != branch:
+        subprocess.run(["git", "checkout", branch], check=True)
+
     subprocess.run(["git", "pull"], check=True)
