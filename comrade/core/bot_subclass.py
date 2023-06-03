@@ -3,7 +3,7 @@ from os import getenv
 from typing import Any
 from urllib.parse import quote_plus
 
-from arrow import Arrow, now
+from arrow import Arrow
 from interactions import MISSING, Client, listen, logger_name
 from pymongo import MongoClient
 
@@ -25,7 +25,7 @@ class Comrade(Client):
     db: MongoClient
     timezone: str
     logger: logging.Logger = logging.getLogger(logger_name)
-    start_time: Arrow = now()
+    start_time: Arrow = Arrow.now()
 
     def __init__(self, *args, **kwargs):
         if (debug_scope := getenv("COMRADE_DEBUG_SCOPE")) is None:
