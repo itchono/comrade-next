@@ -1,10 +1,12 @@
 from dataclasses import dataclass
+from html import unescape
 from typing import Type
-from urllib.parse import unquote
 
 import booru
 from interactions import Embed
 from orjson import loads
+
+from comrade.lib.standalone.markdown_utils import escape_md
 
 # Create a type alias that can be any of the booru classes
 BooruType = (
@@ -102,17 +104,29 @@ class BooruSession:
         post_data = self._posts[self.post_id]
 
         file_url = post_data["file_url"]
-        img_tag_list = ", ".join(map(unquote, post_data["tags"]))
+        img_tag_list = ", ".join(
+            map(escape_md, map(unescape, post_data["tags"]))
+        )
+
+        footer_text = (
+            f"Site: {self.booru.__class__.__name__} | Page {self.page_id} "
+            f"| Post {self.post_id + 1} | Type 'next' to advance"
+        )
 
         embed = Embed(title=self.query)
         embed.set_image(url=file_url)
-        embed.set_footer(text=img_tag_list)
+        embed.set_footer(text=footer_text)
+        # Truncate the tag list if it's too long
+        if len(img_tag_list) > 1000:
+            img_tag_list = img_tag_list[:1000] + "..."
+
+        embed.add_field(name="Tags", value=img_tag_list, inline=False)
 
         # Try to add additional fields to the embed, depending on the booru
 
         # Post ID
         try:
-            embed.add_field(name="ID", value=post_data["id"], inline=True)
+            embed.add_field(name="Post ID", value=post_data["id"], inline=True)
         except KeyError:
             pass
 

@@ -31,7 +31,7 @@ class Booru(Extension):
     )
     @slash_option(
         name="tags",
-        description="The tags to search for",
+        description="The tags to search for; you can use `*` as a wildcard",
         required=True,
         opt_type=OptionType.STRING,
         autocomplete=True,
