@@ -6,7 +6,7 @@ import booru
 from interactions import Embed
 from orjson import loads
 
-from comrade.lib.standalone.markdown_utils import escape_md
+from comrade.lib.markdown_utils import escape_md
 
 # Create a type alias that can be any of the booru classes
 BooruType = (
@@ -81,8 +81,12 @@ class BooruSession:
                 limit=limit_count,
                 random=self.sort_random,
             )
+        except KeyError as e:
+            if "0" in str(e):
+                return False
+            raise e
         except Exception as e:
-            if "no results" in e.args[0]:
+            if "no results" in str(e):
                 return False
             raise e
 

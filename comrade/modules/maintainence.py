@@ -7,7 +7,7 @@ from interactions import (
 )
 
 from comrade.core.updater import pull_repo, restart_process, update_packages
-from comrade.lib.online.checks import is_owner
+from comrade.lib.checks import is_owner
 
 
 class Maintainence(Extension):
