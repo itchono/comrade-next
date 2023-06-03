@@ -81,8 +81,12 @@ class BooruSession:
                 limit=limit_count,
                 random=self.sort_random,
             )
+        except KeyError as e:
+            if "0" in str(e):
+                return False
+            raise e
         except Exception as e:
-            if "no results" in e.args[0]:
+            if "no results" in str(e):
                 return False
             raise e
 
