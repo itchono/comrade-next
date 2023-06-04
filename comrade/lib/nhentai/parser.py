@@ -1,9 +1,12 @@
-import aiohttp
 import bs4
-import orjson
 
-from comrade.lib.nhentai.structures import NoGalleryFoundError
-from comrade.lib.nhentai.urls import ORDERED_PROXIES
+from comrade.lib.nhentai.regex import (
+    GALLERY_ID_REGEX,
+    IMAGES_ID_REGEX,
+    IMAGES_URL_REGEX,
+)
+from comrade.lib.nhentai.structures import NHentaiGallery
+from comrade.lib.nhentai.urls import IMAGE_LINK_BASE, ORDERED_PROXIES
 
 
 def is_valid_page(soup: bs4.BeautifulSoup) -> bool:
@@ -29,42 +32,33 @@ def is_valid_page(soup: bs4.BeautifulSoup) -> bool:
     return len(meta_tags) >= 3
 
 
-async def get_valid_nhentai_page(
-    gallery_num: int,
-) -> tuple[str, bs4.BeautifulSoup]:
-    """
-    Gets the HTML content of an Nhentai gallery's main page.
+def gallery_from_soup(soup: bs4.BeautifulSoup) -> NHentaiGallery:
+    title = soup.find("h1").text
 
-    Cycles through the proxies in ORDERED_PROXIES until one works.
+    # Find gallery ID, based on the first <a> tag inside the <div> with class "cover"
+    # e.g. <a href="/g/185217/1"> -> 185217
+    cover_div = soup.find("div", id="cover")
+    cover_a = cover_div.find("a")
+    gallery_id = int(GALLERY_ID_REGEX.search(cover_a["href"]).group(1))
 
-    Parameters
-    ----------
-    gallery_num : int
-        The gallery number of the Nhentai gallery. (e.g. 185217)
+    # Find the first <noscript> tag to locate a link to the cover,
+    # then extract the image ID from the link
+    images_id_block = soup.find("noscript")
+    images_id = int(IMAGES_ID_REGEX.search(str(images_id_block)).group(1))
 
-    Returns
-    -------
-    tuple[str, bs4.BeautifulSoup]
-        the proxy used to access the page, and the BeautifulSoup object representing the HTML content of the page.
+    # Construct image URLs
 
-    """
+    image_urls = []
 
-    for name, proxy_url_base in ORDERED_PROXIES.items():
-        # Construct the URL to the gallery
-        # e.g. nhenai.net/g/185217
-        req_url = f"{proxy_url_base}/g/{gallery_num}"
+    # Attempt to find all file extensions
+    for block in soup.find_all("noscript"):
+        match = IMAGES_URL_REGEX.search(block.text)
+        if match:
+            page_num = int(match.group(1))
+            img_ext = match.group(2)
+            image_urls.append(
+                f"{IMAGE_LINK_BASE}/{images_id}/{page_num}.{img_ext}"
+            )
+        continue
 
-        async with aiohttp.ClientSession(
-            json_serialize=orjson.dumps
-        ) as session:
-            async with session.get(req_url) as response:
-                html = await response.text()
-
-        soup = bs4.BeautifulSoup(
-            html, "lxml"
-        )  # lxml is faster than html.parser
-
-        if is_valid_page(soup):
-            return name, soup
-
-    raise NoGalleryFoundError("No valid proxies found")
+    return NHentaiGallery(gallery_id, title, images_id, image_urls)
