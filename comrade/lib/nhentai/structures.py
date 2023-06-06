@@ -1,12 +1,32 @@
 from dataclasses import dataclass
 
+from comrade.lib.nhentai.urls import IMAGE_LINK_BASE
+
 
 @dataclass
 class NHentaiGallery:
     gallery_id: int  # 6-digit gallery number
-    title: str
+    title: str  # title of the gallery
     images_id: int  # separate from gallery_id, used for image requests
-    image_list: str  # list of image URLs corresponding to each page
+    image_list: list[str]  # list of image URLs corresponding to each page
+    tags: list[str]  # list of tags
+
+    def __len__(self):
+        return len(self.image_list)
+
+    def __getitem__(self, idx):
+        return self.image_list[idx]
+
+    def __iter__(self):
+        return iter(self.image_list)
+
+    @property
+    def url(self) -> str:
+        return f"https://nhentai.net/g/{self.gallery_id}/"
+
+    @property
+    def cover_url(self) -> str:
+        return IMAGE_LINK_BASE + f"/{self.images_id}/cover.jpg"
 
 
 @dataclass
@@ -31,13 +51,21 @@ class NHentaiGallerySession:
     def page_idx(self) -> int:
         return self.page_number - 1
 
-    @classmethod
-    async def from_gallery_id(cls, gallery_id: int):
+    def advance_page(self) -> bool:
         """
-        Initialize the session from a gallery ID.
+        Advance the page number by one, if possible.
+
+        Returns False if there are no more pages.
         """
-        gallery = await NHentaiGallery.from_gallery_id(gallery_id)
-        return cls(gallery=gallery)
+        if self.page_number + 1 > len(self.gallery):
+            return False
+
+        self.page_number += 1
+        return True
+
+    @property
+    def current_page(self) -> str:
+        return self.gallery[self.page_idx]
 
 
 @dataclass
@@ -58,6 +86,5 @@ class NHentaiSearchSession:
     num_of_retries: int = 0
 
 
-@dataclass
 class NoGalleryFoundError(Exception):
     pass

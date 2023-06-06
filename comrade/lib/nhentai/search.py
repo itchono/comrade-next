@@ -29,7 +29,7 @@ async def get_valid_nhentai_page(
 
     for name, proxy_url_base in ORDERED_PROXIES.items():
         # Construct the URL to the gallery
-        # e.g. nhenai.net/g/185217
+        # e.g. nhentai.net/g/185217
         req_url = f"{proxy_url_base}/g/{gallery_num}"
 
         async with aiohttp.ClientSession(

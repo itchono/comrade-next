@@ -11,5 +11,12 @@ IMAGES_ID_REGEX = re.compile(r"/galleries/(\d+)/cover")
 
 # Regex for extracting image extension and page number from URL
 # e.g. https://t3.nhentai.net/galleries/1019423/2t.jpg -> (2), (jpg)
-# Must ignore other images
-IMAGES_URL_REGEX = re.compile(r"/galleries/\d+/(\d+)(?:t|\.).+")
+# Must ignore other images (e.g. ads, thumbnails) that may be present
+# Capture group 1: page number
+# Capture group 2: image extension
+IMAGES_URL_REGEX = re.compile(r"/galleries/\d+/(\d+)(?:t|\.)\.(jpg|png|gif)")
+
+
+# Regex for extracting tags from tag list (<a> tags inside <div> with class "tag-container")
+# e.g. <a href="/tag/sole-female/" class="tag tag-35762"> -> (sole-female)
+TAGS_REGEX = re.compile(r"/tag/([\w-]+)/")
