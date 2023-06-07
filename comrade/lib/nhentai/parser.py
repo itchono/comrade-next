@@ -48,6 +48,48 @@ def is_valid_page(soup: bs4.BeautifulSoup) -> bool:
     return True
 
 
+def filter_title_text(text: str) -> str:
+    """
+    Converts the title text from the fully formatted title
+    to just the title text.
+
+    The full title text contains text grouped in square brackets and parentheses.
+    The title text is the first group of text not enclosed in square brackets or parentheses.
+
+    Ignore all subsequent groups of text that are not enclosed in square brackets or parentheses.
+
+    examples:
+    '(C91) [Artist] Title (Group) [English]' -> 'Title'
+    '[Artist] Title (Group) [English]' -> 'Title'
+    '[Artist] Title [English] not the title' -> 'Title'  # ignore the last group
+    """
+    title_text = ""
+
+    opening_braces = ["[", "("]
+    closing_braces = ["]", ")"]
+
+    brace_stack = []
+    corr_opening_brace = {b: c for b, c in zip(closing_braces, opening_braces)}
+
+    for c in text:
+        if c in opening_braces:
+            brace_stack.append(c)
+
+            # If we already have nontrivial title text, ignore the rest of the text
+            if title_text.strip() != "":
+                return title_text.strip()
+            continue
+
+        elif (brace := corr_opening_brace.get(c)) and brace_stack[-1] == brace:
+            brace_stack.pop()
+            continue
+
+        if len(brace_stack) == 0:
+            title_text += c
+
+    return title_text.strip()
+
+
 def get_gallery_id_from_cover_block(block: bs4.Tag) -> int:
     """
     Determines the gallery ID from a <div class="cover"> block.
@@ -145,7 +187,8 @@ def get_tags_from_a_blocks(tags_a_blocks: list[bs4.Tag]) -> list[str]:
 
 
 def get_gallery_from_soup(soup: bs4.BeautifulSoup) -> NHentaiGallery:
-    title = soup.find("h1").text
+    full_title = soup.find("h1").text
+    short_title = filter_title_text(full_title)
 
     # Find gallery ID, based on the first <a> tag inside the <div> with class "cover"
     # e.g. <a href="/g/185217/1"> -> 185217
@@ -168,4 +211,6 @@ def get_gallery_from_soup(soup: bs4.BeautifulSoup) -> NHentaiGallery:
     tag_a_blocks = soup.find_all("a", class_="tag")
     tags = get_tags_from_a_blocks(tag_a_blocks)
 
-    return NHentaiGallery(gallery_id, title, images_id, image_urls, tags)
+    return NHentaiGallery(
+        gallery_id, short_title, full_title, images_id, image_urls, tags
+    )

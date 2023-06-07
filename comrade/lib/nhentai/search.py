@@ -1,6 +1,5 @@
 import aiohttp
 import bs4
-import orjson
 
 from comrade.lib.nhentai.parser import is_valid_page
 from comrade.lib.nhentai.structures import NoGalleryFoundError
@@ -9,6 +8,7 @@ from comrade.lib.nhentai.urls import ORDERED_PROXIES
 
 async def get_valid_nhentai_page(
     gallery_num: int,
+    http_session: aiohttp.ClientSession,
 ) -> tuple[str, bs4.BeautifulSoup]:
     """
     Gets the HTML content of an Nhentai gallery's main page.
@@ -32,11 +32,8 @@ async def get_valid_nhentai_page(
         # e.g. nhentai.net/g/185217
         req_url = f"{proxy_url_base}/g/{gallery_num}"
 
-        async with aiohttp.ClientSession(
-            json_serialize=orjson.dumps
-        ) as session:
-            async with session.get(req_url) as response:
-                html = await response.text()
+        async with http_session.get(req_url) as response:
+            html = await response.text()
 
         soup = bs4.BeautifulSoup(
             html, "lxml"

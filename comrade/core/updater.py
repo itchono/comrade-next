@@ -4,6 +4,8 @@ import os
 import subprocess
 import sys
 
+from comrade.lib.updater_utils import get_current_branch
+
 
 def restart_process() -> None:
     """
@@ -37,13 +39,7 @@ def pull_repo(branch: str = "main") -> None:
         The branch to pull from, defaults to "main"
 
     """
-    current_branch = (
-        subprocess.run(
-            ["git", "branch", "--show-current"], capture_output=True, check=True
-        )
-        .stdout.decode()
-        .strip()
-    )
+    current_branch = get_current_branch()
     if current_branch != branch:
         subprocess.run(["git", "checkout", branch], check=True)
 

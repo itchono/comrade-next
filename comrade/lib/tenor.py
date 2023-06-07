@@ -25,7 +25,7 @@ async def tenor_link_to_gif(link: str) -> str:
         async with session.get(link) as response:
             html = await response.text()
 
-    soup = bs4.BeautifulSoup(html, "html.parser")
+    soup = bs4.BeautifulSoup(html, "lxml")
 
     # Find the <img> tag with the GIF
     img = soup.find("img", src=lambda x: x.endswith(".gif"))

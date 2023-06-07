@@ -4,4 +4,4 @@ ORDERED_PROXIES = {
     "nhentai.net": "https://nhentai.net",
 }
 
-IMAGE_LINK_BASE = "https://i.nhentai.net/galleries"
+IMAGE_LINK_BASE = "https://i3.nhentai.net/galleries"
