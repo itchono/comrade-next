@@ -43,10 +43,8 @@ class NHentaiGallery:
             url=self.url,
             description=self.title_block_tags,
         )
-        embed.add_field(
-            name="Gallery", value=str(self.gallery_id), inline=False
-        )
-        embed.add_field(name="Length", value=f"{len(self)} pages", inline=False)
+        embed.add_field(name="Gallery", value=str(self.gallery_id), inline=True)
+        embed.add_field(name="Length", value=f"{len(self)} pages", inline=True)
         embed.add_field(name="Tags", value=", ".join(self.tags), inline=False)
 
         embed.set_footer(text=f"Found using {self.provider}")
