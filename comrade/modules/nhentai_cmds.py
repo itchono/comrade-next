@@ -2,6 +2,8 @@ import re
 from io import BytesIO
 
 from interactions import (
+    Button,
+    ButtonStyle,
     ComponentContext,
     Extension,
     File,
@@ -66,7 +68,9 @@ class NHentai(Extension):
 
         await ctx.send(
             embed=nh_gallery.start_embed,
-            content="Type `np` to start reading, and advance pages.",
+            content="Type `np` (or click the button) to"
+            " start reading, and advance pages.",
+            components=[self.next_page_button()],
         )
 
     @slash_command(description="Retrieve an NHentai gallery")
@@ -146,53 +150,96 @@ class NHentai(Extension):
         # Give the option to advance pages
         await ctx.send(content="Select a gallery to view", components=[menu])
 
-    async def handle_nhentai_np(
-        self, message: Message, session: NHentaiGallerySession
+    async def handle_nhentai_next_page(
+        self,
+        msg_ctx: Message | ComponentContext,
+        session: NHentaiGallerySession,
     ):
         """
         Handles the "np" command for nhentai galleries.
 
+        Sends the next image in the gallery,
+        and disables the button on the previous message.
+
         Parameters
         ----------
-        message: Message
-            The message object
+        msg_ctx: Message | ComponentContext
+            The message or component context calling the command
         session: NHentaiGallerySession
             The gallery session
 
         """
+        # Multiple dispatch handler
+        if isinstance(msg_ctx, Message):
+            sendable = msg_ctx.channel
+            channel_id = sendable.id
+        else:
+            sendable = msg_ctx
+            channel_id = msg_ctx.channel_id
+
+        # Check if there are more pages
         if not session.advance_page():
-            await message.channel.send("No more results found.")
-            del self.gallery_sessions[message.channel.id]
+            await sendable.send("No more results found.")
+            del self.gallery_sessions[channel_id]
             return
 
-        # Request the image
+        # Request and send the image
         async with self.bot.http_session.get(session.current_page_url) as resp:
-            img_io = BytesIO(await resp.read())
-        img_io.seek(0)
+            img_bytes = BytesIO(await resp.read())
+        img_file = File(img_bytes, file_name=session.current_page_filename)
 
-        # Send the image
-        img_file = File(img_io, file_name=session.current_page_filename)
-
-        await message.channel.send(file=img_file)
+        await sendable.send(file=img_file, components=[self.next_page_button()])
 
     @component_callback(re.compile(r"nhentai_search_(\d+)"))
     async def nhentai_search_callback(self, ctx: ComponentContext):
+        """
+        Handles selection callback for the StringSelectMenu in
+        an nhentai gallery search.
+        """
         # Get the gallery ID from the component value
         gallery_id = int(ctx.values[0])
 
         # Initialize the session
         await self.init_gallery_session(ctx, gallery_id)
 
+    def next_page_button(self, disabled: bool = False):
+        """
+        Button used to advance pages in an nhentai gallery.
+        """
+        return Button(
+            style=ButtonStyle.PRIMARY,
+            label="Next Page",
+            custom_id="nhentai_np",
+            disabled=disabled,
+        )
+
+    @component_callback("nhentai_np")
+    async def nhentai_np_callback(self, ctx: ComponentContext):
+        try:
+            # Locate the session
+            nh_gallery_session = self.gallery_sessions[ctx.channel_id]
+            await self.handle_nhentai_next_page(ctx, nh_gallery_session)
+
+        except KeyError:
+            # No session active
+            await ctx.send(
+                "This button was probably created in the past,"
+                " and its session has expired. Please start a new NHentai session.",
+                ephemeral=True,
+            )
+
     @listen("message_create")
     async def nhentai_listener(self, message_event: MessageCreate):
-        # Listen for "next" in channels where a booru session is active
+        """
+        Listens for "np" in channels where a gallery session is active.
+        """
         message: Message = message_event.message
         try:
             # Locate the session
             nh_gallery_session = self.gallery_sessions[message.channel.id]
 
             if message.content.lower() == "np":
-                await self.handle_nhentai_np(message, nh_gallery_session)
+                await self.handle_nhentai_next_page(message, nh_gallery_session)
 
         except KeyError:
             # No session active
