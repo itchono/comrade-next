@@ -119,6 +119,9 @@ class NHentai(Extension):
         page = await get_search_page(query, 1, self.bot.http_session)
         nh_search_result = parse_search_result_from_page(page)
 
+        if not nh_search_result.gallery_ids:
+            return await ctx.send("No results found.")
+
         id_name_iter = zip(
             nh_search_result.gallery_ids,
             nh_search_result.short_titles,

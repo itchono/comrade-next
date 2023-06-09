@@ -94,7 +94,7 @@ async def test_gallery_not_on_nhentai_to(http_session: aiohttp.ClientSession):
     assert len(gallery) == 313
 
 
-async def test_search_nominal(http_session: aiohttp.ClientSession):
+async def test_search_nominal_1(http_session: aiohttp.ClientSession):
     search_query = "alp love live english kurosawa"
 
     page = await get_search_page(search_query, 1, http_session)
@@ -103,3 +103,12 @@ async def test_search_nominal(http_session: aiohttp.ClientSession):
 
     assert 388445 in search_result.gallery_ids
     assert not search_result.does_next_page_exist
+
+
+async def test_search_nominal_2(http_session: aiohttp.ClientSession):
+    search_query = "school swimsuit"
+
+    page = await get_search_page(search_query, 1, http_session)
+
+    search_result = parse_search_result_from_page(page)
+    assert search_result.does_next_page_exist

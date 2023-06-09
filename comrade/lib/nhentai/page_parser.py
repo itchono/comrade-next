@@ -145,18 +145,20 @@ def parse_search_result_from_page(page: NHentaiWebPage) -> NHentaiSearchResult:
     gallery_titles = [title for _, title in gallery_ids_titles]
 
     # Infer page counts from pagination
-    if not (pagination_div := soup.find("div", class_="pagination")):
+    if (
+        pagination_section := soup.find("section", class_="pagination")
+    ) is None:
         # No pagination, only one page
         return NHentaiSearchResult(1, gallery_ids, gallery_titles, False)
 
     # Otherwise, there are at least 2 pages
     # Infer current page number from the <a> tag with class "page current"
-    current_page_tag = pagination_div.find("a", class_="page current")
+    current_page_tag = pagination_section.find("a", class_="page current")
     current_page = int(current_page_tag.text)
 
     # Infer if we are on the last page by trying to find the <a> tag with class "last"
     # If there is no <a> tag with class "last", then we are already on the last page
-    on_last_page = pagination_div.find("a", class_="last") is None
+    on_last_page = pagination_section.find("a", class_="last") is None
 
     return NHentaiSearchResult(
         current_page, gallery_ids, gallery_titles, not on_last_page

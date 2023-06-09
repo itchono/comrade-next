@@ -85,7 +85,7 @@ async def get_search_page(
     for name, proxy_url_base in ORDERED_PROXIES.items():
         # SPECIAL CASES, SHOULD FIND A WAY TO GENERALIZE THIS
         # Skip nhentai.to because it has fewer available galleries
-        if name == "nhentai.to":
+        if name == "nhentai.to Mirror":
             continue
         # If it's google translate, encode the plus signs again
         if name == "Google Translate Proxy":

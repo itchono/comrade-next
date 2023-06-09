@@ -68,7 +68,7 @@ class Comrade(Client):
         """
         The start time of the bot, as an Arrow instance.
         """
-        if st := self._connection_state.start_time is None:
+        if (st := self._connection_state.start_time) is None:
             return arrow.now(self.timezone)
         return arrow.Arrow.fromdatetime(st)
 
