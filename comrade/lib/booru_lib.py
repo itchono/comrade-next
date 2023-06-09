@@ -6,7 +6,7 @@ import booru
 from interactions import Embed
 from orjson import loads
 
-from comrade.lib.markdown_utils import escape_md
+from comrade.lib.text_utils import escape_md, text_safe_length
 
 # Create a type alias that can be any of the booru classes
 BooruType = (
@@ -120,11 +120,12 @@ class BooruSession:
         embed = Embed(title=self.query)
         embed.set_image(url=file_url)
         embed.set_footer(text=footer_text)
-        # Truncate the tag list if it's too long
-        if len(img_tag_list) > 1000:
-            img_tag_list = img_tag_list[:1000] + "..."
 
-        embed.add_field(name="Tags", value=img_tag_list, inline=False)
+        embed.add_field(
+            name="Tags",
+            value=text_safe_length(img_tag_list, 1000),
+            inline=False,
+        )
 
         # Try to add additional fields to the embed, depending on the booru
 

@@ -27,6 +27,12 @@ homepage = "https://github.com/itchono/comrade-next"
 [project.scripts]
 comrade = "comrade.bot:main"
 
+[project.optional-dependencies]
+test = [
+    "pytest >= 7.3",
+    "pytest-asyncio >= 0.21"
+]
+
 [tool.setuptools_scm]
 write_to = "comrade/_version.py"
 
@@ -41,3 +47,4 @@ line-length = 80
 
 [tool.pytest.ini_options]
 filterwarnings = ["ignore::DeprecationWarning"]
+asyncio_mode = "auto"

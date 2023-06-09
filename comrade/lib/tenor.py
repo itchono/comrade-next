@@ -1,9 +1,10 @@
 import aiohttp
 import bs4
-import orjson
 
 
-async def tenor_link_to_gif(link: str) -> str:
+async def tenor_link_to_gif(
+    link: str, http_session: aiohttp.ClientSession
+) -> str:
     """
     Converts a Tenor link to a GIF link.
 
@@ -11,6 +12,8 @@ async def tenor_link_to_gif(link: str) -> str:
     ----------
     link: str
         The Tenor link to convert.
+    http_session : aiohttp.ClientSession
+        The aiohttp ClientSession to use for the request.
 
     Returns
     -------
@@ -21,9 +24,8 @@ async def tenor_link_to_gif(link: str) -> str:
     if not link.startswith("https://tenor.com/view/"):
         raise ValueError("Link is not a Tenor link")
 
-    async with aiohttp.ClientSession(json_serialize=orjson.dumps) as session:
-        async with session.get(link) as response:
-            html = await response.text()
+    async with http_session.get(link) as response:
+        html = await response.text()
 
     soup = bs4.BeautifulSoup(html, "lxml")
 

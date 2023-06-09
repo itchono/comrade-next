@@ -1,5 +1,4 @@
 import asyncio
-from urllib.parse import quote_plus
 
 import booru
 

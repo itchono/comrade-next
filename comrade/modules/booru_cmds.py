@@ -16,6 +16,7 @@ from orjson import loads
 
 from comrade.lib.booru_lib import BOORUS, BooruSession
 from comrade.lib.checks import nsfw_channel
+from comrade.lib.text_utils import text_safe_length
 
 
 class Booru(Extension):

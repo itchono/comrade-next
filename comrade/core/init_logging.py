@@ -2,9 +2,11 @@
 import logging
 import os
 import time
+from os import getenv
 from pathlib import Path
 from typing import Optional
 
+import arrow
 from interactions import logger_name
 
 
@@ -12,14 +14,24 @@ class CustomLogger:
     """Log all errors to a file, and log all logging events to console"""
 
     def __init__(self):
-        # Time format: YYYY-MM-DD HH:MM:SS EST
+        # Time format: YYYY-MM-DD HH:MM:SS <timezone>
         # Logger format: [TIME] [LEVEL]: MESSAGE
 
+        timezone = getenv("COMRADE_TIMEZONE")
+
         self.formatter = logging.Formatter(
-            "[%(asctime)s EST] [%(name)s] [%(levelname)s]: %(message)s",
+            "[%(asctime)s "
+            + timezone
+            + "] [%(name)s] [%(levelname)s]: %(message)s",
             "%Y-%m-%d %H:%M:%S",
         )
-        self.formatter.converter = time.localtime
+
+        def time_convert(*args) -> time.struct_time:
+            # Convert time to tz specified in .env
+            current_time = arrow.utcnow().to(timezone)
+            return current_time.timetuple()
+
+        self.formatter.converter = time_convert
 
         # Make sure the logs folder exists
         os.makedirs("./logs", exist_ok=True)

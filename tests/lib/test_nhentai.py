@@ -1,23 +1,14 @@
-import asyncio
-
 import aiohttp
 import pytest
 
-from comrade.lib.nhentai.parser import (
-    filter_title_text,
-    get_gallery_from_soup,
-    is_valid_page,
+from comrade.lib.nhentai.page_parser import (
+    is_valid_gallery_soup,
+    parse_gallery_from_page,
+    parse_search_result_from_page,
 )
-from comrade.lib.nhentai.search import get_valid_nhentai_page
+from comrade.lib.nhentai.search import get_gallery_page, get_search_page
 from comrade.lib.nhentai.structures import NoGalleryFoundError
-
-
-async def get_page_coro(gallery_id):
-    """
-    Helper function for testing without async tests
-    """
-    async with aiohttp.ClientSession() as http_session:
-        return await get_valid_nhentai_page(gallery_id, http_session)
+from comrade.lib.nhentai.text_filters import filter_title_text
 
 
 @pytest.mark.parametrize(
@@ -26,8 +17,10 @@ async def get_page_coro(gallery_id):
         ("(C91) [HitenKei (Hiten)] R.E.I.N.A [English] [Scrubs]", "R.E.I.N.A"),
         (
             "[Morittokoke (Morikoke)] Hyrule Hanei no Tame no Katsudou! | "
-            "Taking Steps to Ensure Hyrule's Prosperity! (The Legend of Zelda) [English] =The Lost Light= [Digital]",
-            "Hyrule Hanei no Tame no Katsudou! | Taking Steps to Ensure Hyrule's Prosperity!",
+            "Taking Steps to Ensure Hyrule's Prosperity! "
+            "(The Legend of Zelda) [English] =The Lost Light= [Digital]",
+            "Hyrule Hanei no Tame no Katsudou! | "
+            "Taking Steps to Ensure Hyrule's Prosperity!",
         ),
     ],
 )
@@ -35,7 +28,9 @@ def test_title_parser(full_title, expected_title):
     assert filter_title_text(full_title) == expected_title
 
 
-def test_gallery_acquisition_nominal():
+async def test_gallery_acquisition_nominal(
+    http_session: aiohttp.ClientSession,
+):
     """
     Tests accessing a gallery that is on nhentai.to (primary mirror)
 
@@ -43,17 +38,16 @@ def test_gallery_acquisition_nominal():
     """
     gallery_id = 185217
 
-    proxy_name, page_soup = asyncio.run(get_page_coro(gallery_id))
+    page = await get_gallery_page(gallery_id, http_session)
 
-    assert proxy_name == "nhentai.to"
-    assert is_valid_page(page_soup)
+    assert page.provider == "nhentai.to Mirror"
+    assert is_valid_gallery_soup(page.soup)
 
-    gallery = get_gallery_from_soup(page_soup)
+    gallery = parse_gallery_from_page(page)
 
     assert gallery.gallery_id == gallery_id
     assert (
-        gallery.full_title
-        == "(C91) [HitenKei (Hiten)] R.E.I.N.A [English] [Scrubs]"
+        gallery.title == "(C91) [HitenKei (Hiten)] R.E.I.N.A [English] [Scrubs]"
     )
 
     assert (
@@ -64,31 +58,32 @@ def test_gallery_acquisition_nominal():
     assert len(gallery) == 28
 
 
-def test_not_present_anywhere():
+async def test_not_present_anywhere(http_session: aiohttp.ClientSession):
     """
     Verify that a gallery that is not present on any mirror raises an exception
     """
     gallery_id = -1
 
     with pytest.raises(NoGalleryFoundError):
-        asyncio.run(get_page_coro(gallery_id))
+        await get_gallery_page(gallery_id, http_session)
 
 
-def test_gallery_not_on_nhentai_to():
+async def test_gallery_not_on_nhentai_to(http_session: aiohttp.ClientSession):
     gallery_id = 444797
 
-    proxy_name, page_soup = asyncio.run(get_page_coro(gallery_id))
+    page = await get_gallery_page(gallery_id, http_session)
 
-    assert proxy_name == "Google Translate Proxy"
+    assert page.provider == "Google Translate Proxy"
 
-    assert is_valid_page(page_soup)
+    assert is_valid_gallery_soup(page.soup)
 
-    gallery = get_gallery_from_soup(page_soup)
+    gallery = parse_gallery_from_page(page)
 
     assert gallery.gallery_id == gallery_id
     assert (
-        gallery.full_title
-        == "[Michiking] Ane Taiken Jogakuryou | Older Sister Experience - The Girls' Dormitory [English] [Yuzuru Katsuragi] [Digital]"
+        gallery.title
+        == "[Michiking] Ane Taiken Jogakuryou | Older Sister Experience"
+        " - The Girls' Dormitory [English] [Yuzuru Katsuragi] [Digital]"
     )
 
     assert (
@@ -97,3 +92,14 @@ def test_gallery_not_on_nhentai_to():
     )
 
     assert len(gallery) == 313
+
+
+async def test_search_nominal(http_session: aiohttp.ClientSession):
+    search_query = "alp love live english kurosawa"
+
+    page = await get_search_page(search_query, 1, http_session)
+
+    search_result = parse_search_result_from_page(page)
+
+    assert 388445 in search_result.gallery_ids
+    assert not search_result.does_next_page_exist

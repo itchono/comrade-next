@@ -1,17 +1,26 @@
 from dataclasses import dataclass
+from functools import cached_property
+from typing import NamedTuple
 
+from bs4 import BeautifulSoup
 from interactions import Embed
+
+from comrade.lib.nhentai.text_filters import filter_title_text
+
+
+class NHentaiWebPage(NamedTuple):
+    provider: str
+    soup: BeautifulSoup
 
 
 @dataclass
 class NHentaiGallery:
     gallery_id: int  # 6-digit gallery number
-    short_title: str  # title of the gallery, without tag blocks
-    full_title: str  # title of the gallery
+    title: str  # title of the gallery
     images_id: int  # separate from gallery_id, used for image requests
     image_list: list[str]  # list of image URLs corresponding to each page
     tags: list[str]  # list of tags
-    provider: str = "nhentai.net"  # provider used to find the gallery
+    provider: str  # provider used to find the gallery
 
     def __len__(self):
         return len(self.image_list)
@@ -31,10 +40,14 @@ class NHentaiGallery:
         image_extension = self.image_list[0].split(".")[-1]
         return f"https://t.nhentai.net/galleries/{self.images_id}/cover.{image_extension}"
 
-    @property
+    @cached_property
+    def short_title(self) -> str:
+        return filter_title_text(self.title)
+
+    @cached_property
     def title_block_tags(self) -> str:
         # Returns parts of the full title minus the short title
-        return self.full_title.replace(self.short_title, "")
+        return self.title.replace(self.short_title, "")
 
     @property
     def start_embed(self) -> Embed:
@@ -63,6 +76,8 @@ class NHentaiGallerySession:
 
     Attributes
     ----------
+    user_id : int
+        The user ID of the session owner.
     gallery : NHentaiGallery
         The gallery to use for the session.
     page_number : int
@@ -71,6 +86,7 @@ class NHentaiGallerySession:
         Whether or not to use spoiler images.
     """
 
+    user_id: int
     gallery: NHentaiGallery
     page_number: int = 0
     spoiler_imgs: bool = False
@@ -91,21 +107,67 @@ class NHentaiGallerySession:
         self.page_number += 1
         return True
 
+    def set_page(self, page_number: int) -> bool:
+        """
+        Set the page number to a specific page.
+
+        Returns False if the page number is out of bounds.
+        """
+        if page_number < 0 or page_number > len(self.gallery):
+            return False
+
+        self.page_number = page_number
+        return True
+
     @property
-    def current_page(self) -> str:
+    def current_page_url(self) -> str:
         if self.page_number == 0:
             return self.gallery.cover_url
         return self.gallery[self.page_idx]
 
     @property
-    def current_filename(self) -> str:
-        filename_end = self.current_page.split("/")[-1]
+    def current_page_filename(self) -> str:
+        filename_end = self.current_page_url.split("/")[-1]
 
         filename = f"{self.gallery.gallery_id}_page_{filename_end}"
 
         if self.spoiler_imgs:
             return f"SPOILER_{filename}"
         return filename
+
+
+@dataclass
+class NHentaiSearchResult:
+    """
+    Container for search results.
+
+    Attributes
+    ----------
+    page_number : int
+        The page number the results are on.
+        i.e. nth page of search results.
+    gallery_ids : list[int]
+        List of gallery IDs found on the page.
+    titles : list[str]
+        List of titles found on the page.
+    does_next_page_exist : bool
+        Whether or not there is a next page.
+    """
+
+    page_number: int
+    gallery_ids: list[int]
+    titles: list[str]
+    does_next_page_exist: bool
+
+    @cached_property
+    def short_titles(self) -> list[str]:
+        return list(map(filter_title_text, self.titles))
+
+    @cached_property
+    def title_blocks(self) -> list[str]:
+        return list(
+            map(lambda t: t.replace(filter_title_text(t), ""), self.titles)
+        )
 
 
 @dataclass
@@ -116,15 +178,26 @@ class NHentaiSearchSession:
 
     Attributes
     ----------
+    user_id : int
+        The user ID of the session owner.
     query : str
         The query to use for the session. (e.g. english, translated, etc.)
-    num_of_retries : int
-        The number of times the session has retried the query.
+    results_pages : list[NHentaiSearchResult]
+        List of search results pages.
     """
 
+    user_id: int
     query: str
-    num_of_retries: int = 0
+    results_pages: list[NHentaiSearchResult]
+
+    @property
+    def num_pages_loaded(self) -> int:
+        return len(self.results_pages)
 
 
 class NoGalleryFoundError(Exception):
+    pass
+
+
+class NoSearchResultsError(Exception):
     pass
