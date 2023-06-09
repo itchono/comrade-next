@@ -57,7 +57,8 @@ def test_gallery_acquisition_nominal():
     )
 
     assert (
-        gallery.image_list[0] == "https://i.nhentai.net/galleries/1019423/1.jpg"
+        gallery.image_list[0]
+        == "https://i3.nhentai.net/galleries/1019423/1.jpg"
     )
 
     assert len(gallery) == 28
@@ -91,7 +92,8 @@ def test_gallery_not_on_nhentai_to():
     )
 
     assert (
-        gallery.image_list[0] == "https://i.nhentai.net/galleries/2485699/1.jpg"
+        gallery.image_list[0]
+        == "https://i3.nhentai.net/galleries/2485699/1.jpg"
     )
 
     assert len(gallery) == 313
