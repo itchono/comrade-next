@@ -3,6 +3,7 @@ from os import getenv
 from typing import Any
 from urllib.parse import quote_plus
 
+import arrow
 from aiohttp import ClientSession
 from interactions import MISSING, Client, listen, logger_name
 from pymongo import MongoClient
@@ -61,6 +62,15 @@ class Comrade(Client):
     def http_session(self) -> ClientSession:
         # Hack to get the aiohttp session from the http client
         return self.http._HTTPClient__session
+
+    @property
+    def start_time(self) -> arrow.Arrow:
+        """
+        The start time of the bot, as an Arrow instance.
+        """
+        if st := self._connection_state.start_time is None:
+            return arrow.now(self.timezone)
+        return arrow.Arrow.fromdatetime(st)
 
     # override extension loading to log when an extension is loaded
     def load_extension(

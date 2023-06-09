@@ -7,6 +7,8 @@ COMRADE_INTENTS = (
 CLIENT_INIT_KWARGS = {
     "intents": COMRADE_INTENTS,
     "auto_defer": True,
+    "sync_ext": True,
+    "delete_unused_application_cmds": True,
 }
 
 MAIN_COLOUR = 0xD7342A  # Red
