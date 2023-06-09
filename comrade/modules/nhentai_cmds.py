@@ -56,7 +56,9 @@ class NHentai(Extension):
         page = await get_gallery_page(gallery_id, self.bot.http_session)
         nh_gallery = parse_gallery_from_page(page)
 
-        session = NHentaiGallerySession(nh_gallery, spoiler_imgs=spoiler_imgs)
+        session = NHentaiGallerySession(
+            ctx.author_id, nh_gallery, spoiler_imgs=spoiler_imgs
+        )
         self.gallery_sessions[ctx.channel_id] = session
 
         if not send_embed:
