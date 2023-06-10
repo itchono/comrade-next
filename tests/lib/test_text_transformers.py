@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from comrade.lib.text_transformers import mock, owoify
+from comrade.lib.text_utils.funny_formatting import mock, owoify
 
 
 @pytest.fixture

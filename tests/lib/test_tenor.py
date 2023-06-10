@@ -1,5 +1,4 @@
-import asyncio
-
+import aiohttp
 import pytest
 
 from comrade.lib.tenor import tenor_link_to_gif
@@ -18,7 +17,9 @@ from comrade.lib.tenor import tenor_link_to_gif
         ),
     ],
 )
-def test_gif_conversion(picker_link: str, expected_link: str):
-    gif_link = asyncio.run(tenor_link_to_gif(picker_link))
+async def test_gif_conversion(
+    picker_link: str, expected_link: str, http_session: aiohttp.ClientSession
+):
+    gif_link = await tenor_link_to_gif(picker_link, http_session)
 
     assert gif_link == expected_link

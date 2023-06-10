@@ -16,6 +16,7 @@ from orjson import loads
 
 from comrade.lib.booru_lib import BOORUS, BooruSession
 from comrade.lib.checks import nsfw_channel
+from comrade.lib.text_utils import text_safe_length
 
 
 class Booru(Extension):
@@ -103,13 +104,30 @@ class Booru(Extension):
         tags = loads(await booru_obj.find_tags(most_recent_tag))
 
         if not tags:
-            return await ctx.send([f" ".join(the_rest + [most_recent_tag])])
+            return await ctx.send([" ".join(the_rest + [most_recent_tag])])
 
         to_send = [
             f"{' '.join(the_rest + [unquote(tag)])}" for tag in tags[:10]
         ]
 
         await ctx.send(to_send)
+
+    async def handle_booru_next(
+        self, message: Message, booru_session: BooruSession
+    ):
+        """
+        Handles the "next" command for booru sessions.
+
+        Parameters
+        ----------
+        message : Message
+            The message to handle.
+        """
+        if not await booru_session.advance_post():
+            await message.channel.send("No more results found.")
+            del self.booru_sessions[message.channel.id]
+            return
+        await message.channel.send(embed=booru_session.formatted_embed)
 
     @listen("message_create")
     async def booru_listener(self, message_event: MessageCreate):
@@ -118,11 +136,7 @@ class Booru(Extension):
         try:
             booru_session = self.booru_sessions[message.channel.id]
             if message.content.lower() == "next":
-                if not await booru_session.advance_post():
-                    await message.channel.send("No more results found.")
-                    del self.booru_sessions[message.channel.id]
-                    return
-                await message.channel.send(embed=booru_session.formatted_embed)
+                await self.handle_booru_next(message, booru_session)
         except KeyError:
             pass
 
