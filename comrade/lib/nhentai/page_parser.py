@@ -1,3 +1,4 @@
+import re
 from functools import partial
 
 import bs4
@@ -13,6 +14,7 @@ from comrade.lib.nhentai.structures import (
     NHentaiGallery,
     NHentaiSearchResult,
     NHentaiWebPage,
+    NoSearchResultsError,
 )
 
 
@@ -58,15 +60,25 @@ def is_valid_search_soup(soup: bs4.BeautifulSoup) -> bool:
     Returns true if the HTML content of the page represents
     a valid NHentai search page (i.e. no Cloudflare error page,
     and results are found)
-
-
     """
     meta_tags = soup.find_all("meta")
 
     if len(meta_tags) < 3:
         return False
 
-    negative_results = ["Just a moment", "No results found", "0 Results"]
+    if "Just a moment" in soup.text:
+        return False
+
+    return True
+
+
+def has_search_results_soup(soup: bs4.BeautifulSoup) -> bool:
+    """
+    Returns true if the page contains at least 1 valid search result.
+
+    Used to check if the search query returned any results.
+    """
+    negative_results = ["No results found", "0 Results"]
 
     for result in negative_results:
         if result in soup.text:
@@ -130,6 +142,9 @@ def parse_search_result_from_page(page: NHentaiWebPage) -> NHentaiSearchResult:
     """
     soup = page.soup
 
+    if not has_search_results_soup(soup):
+        raise NoSearchResultsError("No search results found.")
+
     # Find the search results container
     search_results_div = soup.find("div", id="content")
 
@@ -149,17 +164,58 @@ def parse_search_result_from_page(page: NHentaiWebPage) -> NHentaiSearchResult:
         pagination_section := soup.find("section", class_="pagination")
     ) is None:
         # No pagination, only one page
-        return NHentaiSearchResult(1, gallery_ids, gallery_titles, False)
+        return NHentaiSearchResult(1, gallery_ids, gallery_titles)
 
     # Otherwise, there are at least 2 pages
     # Infer current page number from the <a> tag with class "page current"
     current_page_tag = pagination_section.find("a", class_="page current")
     current_page = int(current_page_tag.text)
 
-    # Infer if we are on the last page by trying to find the <a> tag with class "last"
-    # If there is no <a> tag with class "last", then we are already on the last page
-    on_last_page = pagination_section.find("a", class_="last") is None
+    return NHentaiSearchResult(current_page, gallery_ids, gallery_titles)
 
-    return NHentaiSearchResult(
-        current_page, gallery_ids, gallery_titles, not on_last_page
-    )
+
+def parse_maximum_search_pages(page: NHentaiWebPage) -> int:
+    """
+    Determines the maximum number of pages for a search query.
+
+    Parameters
+    ----------
+    page : NHentaiWebPage
+        The page to extract the maximum number of pages from.
+
+    Returns
+    -------
+    int
+        the maximum number of pages for a search query.
+
+    Uses inspection of the pagination section of the page
+    to determine the maximum number of pages.
+    """
+
+    soup = page.soup
+
+    if not has_search_results_soup(soup):
+        raise NoSearchResultsError("No search results found.")
+
+    # Try to find the pagination section
+    # If it doesn't exist, then there is only one page
+    if (
+        pagination_section := soup.find("section", class_="pagination")
+    ) is None:
+        # No pagination, only one page
+        return 1
+
+    # Otherwise, there are at least 2 pages
+    # Infer the maximum page number from the <a> tag with class "last"
+    last_page_tag = pagination_section.find("a", class_="last")
+
+    if last_page_tag is None:
+        # This means we are already on the last page
+        # So the current page number is the maximum page number
+        current_page_tag = pagination_section.find("a", class_="page current")
+        return int(current_page_tag.text)
+
+    # Otherwise, we can extract the maximum page number from the last page tag
+    # (using the "href" attribute)
+    pattern = re.compile(r"page=(\d+)")
+    return int(pattern.search(last_page_tag["href"]).group(1))

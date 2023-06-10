@@ -2,12 +2,17 @@ import aiohttp
 import pytest
 
 from comrade.lib.nhentai.page_parser import (
+    has_search_results_soup,
     is_valid_gallery_soup,
     parse_gallery_from_page,
+    parse_maximum_search_pages,
     parse_search_result_from_page,
 )
 from comrade.lib.nhentai.search import get_gallery_page, get_search_page
-from comrade.lib.nhentai.structures import NoGalleryFoundError
+from comrade.lib.nhentai.structures import (
+    NoGalleryFoundError,
+    NoSearchResultsError,
+)
 from comrade.lib.nhentai.text_filters import filter_title_text
 
 
@@ -100,15 +105,29 @@ async def test_search_nominal_1(http_session: aiohttp.ClientSession):
     page = await get_search_page(search_query, 1, http_session)
 
     search_result = parse_search_result_from_page(page)
+    num_pages = parse_maximum_search_pages(page)
 
     assert 388445 in search_result.gallery_ids
-    assert not search_result.does_next_page_exist
+    assert num_pages == 1
 
 
 async def test_search_nominal_2(http_session: aiohttp.ClientSession):
     search_query = "school swimsuit"
 
     page = await get_search_page(search_query, 1, http_session)
+    num_pages = parse_maximum_search_pages(page)
+    assert num_pages > 1
 
-    search_result = parse_search_result_from_page(page)
-    assert search_result.does_next_page_exist
+    parse_search_result_from_page(page)
+
+
+async def test_search_negative(http_session: aiohttp.ClientSession):
+    search_query = "this should not exist"
+
+    page = await get_search_page(search_query, 1, http_session)
+    assert not has_search_results_soup(page.soup)
+
+    with pytest.raises(NoSearchResultsError):
+        parse_maximum_search_pages(page)
+    with pytest.raises(NoSearchResultsError):
+        parse_search_result_from_page(page)

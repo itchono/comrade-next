@@ -90,12 +90,13 @@ async def get_search_page(
         # If it's google translate, encode the plus signs again
         if name == "Google Translate Proxy":
             encoded_search_query = quote(encoded_search_query)
+            ampersand = quote("&")
+        else:
+            ampersand = "&"
 
         # Construct the URL to the gallery
         # e.g. nhentai.net/search/?q=alp+love+live
-        req_url = (
-            f"{proxy_url_base}/search/?q={encoded_search_query}&page={pagenum}"
-        )
+        req_url = f"{proxy_url_base}/search/?q={encoded_search_query}{ampersand}page={pagenum}"
 
         async with http_session.get(req_url) as response:
             html = await response.text()

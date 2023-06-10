@@ -150,14 +150,11 @@ class NHentaiSearchResult:
         List of gallery IDs found on the page.
     titles : list[str]
         List of titles found on the page.
-    does_next_page_exist : bool
-        Whether or not there is a next page.
     """
 
     page_number: int
     gallery_ids: list[int]
     titles: list[str]
-    does_next_page_exist: bool
 
     @cached_property
     def short_titles(self) -> list[str]:
@@ -182,17 +179,16 @@ class NHentaiSearchSession:
         The user ID of the session owner.
     query : str
         The query to use for the session. (e.g. english, translated, etc.)
-    results_pages : list[NHentaiSearchResult]
-        List of search results pages.
+    results_pages : dict[int, NHentaiSearchResult]
+        Mapping to search results pages.
+    maximum_pages : int
+        The maximum number of pages available in the query
     """
 
     user_id: int
     query: str
-    results_pages: list[NHentaiSearchResult]
-
-    @property
-    def num_pages_loaded(self) -> int:
-        return len(self.results_pages)
+    results_pages: dict[int, NHentaiSearchResult]
+    maximum_pages: int
 
 
 class NoGalleryFoundError(Exception):
