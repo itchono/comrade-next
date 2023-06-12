@@ -11,9 +11,7 @@ license = { text = "MIT" }
 dynamic = ["version"]
 dependencies = [
     "interactions.py[speedup,voice,jurigged] == 5.6.0",
-    "python-dotenv >= 1.0.0",
     "pymongo >= 4.3",
-    "dnspython >= 2.3",
     "beautifulsoup4 >= 4",
     "pydub >= 0.25",
     "arrow >= 1.2",
