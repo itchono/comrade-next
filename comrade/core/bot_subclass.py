@@ -1,12 +1,12 @@
 import logging
 from os import getenv
 from typing import Any
-from urllib.parse import quote_plus
 
 import arrow
 from aiohttp import ClientSession
 from interactions import MISSING, Client, listen, logger_name
 from pymongo import MongoClient
+from pymongo.database import Database
 
 from comrade.core.const import CLIENT_INIT_KWARGS
 
@@ -20,10 +20,10 @@ class Comrade(Client):
     - MongoDB connection
     - Configuration store
     - logging
-    - uptime
+    - uptime as Arrow type
     """
 
-    db: MongoClient
+    db: Database
     timezone: str
     logger: logging.Logger = logging.getLogger(logger_name)
 
@@ -50,8 +50,10 @@ class Comrade(Client):
         except KeyError:
             timezone = getenv("COMRADE_TIMEZONE")
 
-        self.db = MongoClient(quote_plus(mongokey))
-        self.logger.info("Connected to MongoDB")
+        mongo_client = MongoClient(mongokey)
+        self.db = mongo_client[mongo_client.list_database_names()[0]]
+        self.logger.info(f"Connected to MongoDB, database name: {self.db.name}")
+
         self.timezone = timezone
 
     @listen()
