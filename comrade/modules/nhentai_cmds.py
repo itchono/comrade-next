@@ -22,8 +22,7 @@ from interactions import (
 from interactions.api.events import MessageCreate
 
 from comrade.core.bot_subclass import Comrade
-from comrade.lib.checks import nsfw_channel
-from comrade.lib.discord_utils.custom_paginators import DynamicPaginator
+from comrade.lib.discord_utils import DynamicPaginator, multi_ctx_dispatch
 from comrade.lib.nhentai.page_parser import (
     has_search_results_soup,
     parse_gallery_from_page,
@@ -31,7 +30,10 @@ from comrade.lib.nhentai.page_parser import (
     parse_search_result_from_page,
 )
 from comrade.lib.nhentai.search import get_gallery_page, get_search_page
-from comrade.lib.nhentai.structures import NHentaiGallerySession, NHentaiSearchSession
+from comrade.lib.nhentai.structures import (
+    NHentaiGallerySession,
+    NHentaiSearchSession,
+)
 from comrade.lib.text_utils import text_safe_length
 
 
@@ -76,13 +78,19 @@ class NHentai(Extension):
             embed=nh_gallery.start_embed,
             content="Type `np` (or click the button) to"
             " start reading, and advance pages.",
-            components=[self.next_page_button()],
+            components=[self.next_page_button],
         )
 
-    @slash_command(description="Retrieve an NHentai gallery")
+    @slash_command(
+        name="nhentai",
+        description="NHentai viewer",
+        sub_cmd_name="gallery",
+        sub_cmd_description="Retrieve an NHentai gallery by gallery number",
+        nsfw=True,
+    )
     @slash_option(
         name="gallery",
-        description="The gallery ID, aka the 6 digits",
+        description="Gallery number, aka the 6 digits",
         required=True,
         opt_type=OptionType.INTEGER,
     )
@@ -105,27 +113,22 @@ class NHentai(Extension):
         spoiler_imgs: bool
             Whether or not to send images with spoilers
         """
-        if not nsfw_channel(ctx):
-            return await ctx.send(
-                "This command can only be used in an NSFW channel.",
-                ephemeral=True,
-            )
         await self.init_gallery_session(ctx, gallery, spoiler_imgs)
 
-    @slash_command(description="Search for an NHentai gallery")
+    @slash_command(
+        name="nhentai",
+        description="NHentai viewer",
+        sub_cmd_name="search",
+        sub_cmd_description="Search for an NHentai gallery using tags",
+        nsfw=True,
+    )
     @slash_option(
         name="query",
-        description="The search query",
+        description="The search query, just as if you were searching on the site",
         required=True,
         opt_type=OptionType.STRING,
     )
     async def nhentai_search(self, ctx: SlashContext, query: str):
-        if not nsfw_channel(ctx):
-            return await ctx.send(
-                "This command can only be used in an NSFW channel.",
-                ephemeral=True,
-            )
-
         page = await get_search_page(query, 1, self.bot.http_session)
 
         if not has_search_results_soup(page.soup):
@@ -173,13 +176,7 @@ class NHentai(Extension):
             The gallery session
 
         """
-        # Multiple dispatch handler
-        if isinstance(msg_ctx, Message):
-            sendable = msg_ctx.channel
-            channel_id = sendable.id
-        else:
-            sendable = msg_ctx
-            channel_id = msg_ctx.channel_id
+        sendable, channel_id = multi_ctx_dispatch(msg_ctx)
 
         # Check if there are more pages
         if not session.advance_page():
@@ -192,7 +189,7 @@ class NHentai(Extension):
             img_bytes = BytesIO(await resp.read())
         img_file = File(img_bytes, file_name=session.current_page_filename)
 
-        await sendable.send(file=img_file, components=[self.next_page_button()])
+        await sendable.send(file=img_file, components=[self.next_page_button])
 
     @component_callback(re.compile(r"nhentai_search_(\d+)"))
     async def nhentai_search_callback(self, ctx: ComponentContext):
@@ -206,6 +203,7 @@ class NHentai(Extension):
         # Initialize the session
         await self.init_gallery_session(ctx, gallery_id)
 
+    @property
     def next_page_button(self, disabled: bool = False):
         """
         Button used to advance pages in an nhentai gallery.

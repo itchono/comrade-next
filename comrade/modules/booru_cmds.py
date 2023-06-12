@@ -2,11 +2,15 @@ from urllib.parse import unquote
 
 from interactions import (
     AutocompleteContext,
+    Button,
+    ButtonStyle,
+    ComponentContext,
     Extension,
     Message,
     OptionType,
     SlashCommandChoice,
     SlashContext,
+    component_callback,
     listen,
     slash_command,
     slash_option,
@@ -15,14 +19,13 @@ from interactions.api.events import MessageCreate
 from orjson import loads
 
 from comrade.lib.booru_lib import BOORUS, BooruSession
-from comrade.lib.checks import nsfw_channel
-from comrade.lib.text_utils import text_safe_length
+from comrade.lib.discord_utils import multi_ctx_dispatch
 
 
 class Booru(Extension):
     booru_sessions: dict[int, BooruSession] = {}
 
-    @slash_command(description="Gets a random image from a booru")
+    @slash_command(description="Gets a random image from a booru", nsfw=True)
     @slash_option(
         name="booru_name",
         description="The booru to get the image from",
@@ -60,12 +63,6 @@ class Booru(Extension):
         tags : str
             The tags to search for.
         """
-        if not nsfw_channel(ctx) and booru_name != "safebooru":
-            return await ctx.send(
-                "This command can only be used in an NSFW channel.",
-                ephemeral=True,
-            )
-
         booru_obj = BOORUS[booru_name]()
         booru_session = BooruSession(booru_obj, tags, sort_random)
 
@@ -75,7 +72,10 @@ class Booru(Extension):
 
         self.booru_sessions[ctx.channel_id] = booru_session
 
-        await ctx.send(embed=booru_session.formatted_embed)
+        await ctx.send(
+            embed=booru_session.formatted_embed,
+            components=[self.next_page_button],
+        )
 
     @booru.autocomplete("tags")
     async def tags_autocomplete(self, ctx: AutocompleteContext):
@@ -113,7 +113,7 @@ class Booru(Extension):
         await ctx.send(to_send)
 
     async def handle_booru_next(
-        self, message: Message, booru_session: BooruSession
+        self, msg_ctx: Message | ComponentContext, session: BooruSession
     ):
         """
         Handles the "next" command for booru sessions.
@@ -123,11 +123,27 @@ class Booru(Extension):
         message : Message
             The message to handle.
         """
-        if not await booru_session.advance_post():
-            await message.channel.send("No more results found.")
-            del self.booru_sessions[message.channel.id]
+        sendable, channel_id = multi_ctx_dispatch(msg_ctx)
+
+        if not await session.advance_post():
+            await sendable.send("No more results found.")
+            del self.booru_sessions[channel_id]
             return
-        await message.channel.send(embed=booru_session.formatted_embed)
+        await sendable.send(
+            embed=session.formatted_embed, components=[self.next_page_button]
+        )
+
+    @property
+    def next_page_button(self, disabled: bool = False):
+        """
+        Button used to advance pages in an nhentai gallery.
+        """
+        return Button(
+            style=ButtonStyle.PRIMARY,
+            label="Next Post",
+            custom_id="booru_next",
+            disabled=disabled,
+        )
 
     @listen("message_create")
     async def booru_listener(self, message_event: MessageCreate):
@@ -139,6 +155,21 @@ class Booru(Extension):
                 await self.handle_booru_next(message, booru_session)
         except KeyError:
             pass
+
+    @component_callback("booru_next")
+    async def booru_next_callback(self, ctx: ComponentContext):
+        try:
+            # Locate the session
+            booru_session = self.booru_sessions[ctx.channel_id]
+            await self.handle_booru_next(ctx, booru_session)
+
+        except KeyError:
+            # No session active
+            await ctx.send(
+                "This button was probably created in the past,"
+                " and its session has expired. Please start a new Booru session.",
+                ephemeral=True,
+            )
 
 
 def setup(bot):
