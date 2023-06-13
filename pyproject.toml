@@ -11,14 +11,13 @@ license = { text = "MIT" }
 dynamic = ["version"]
 dependencies = [
     "interactions.py[speedup,voice,jurigged] == 5.6.0",
-    "python-dotenv >= 1.0.0",
     "pymongo >= 4.3",
-    "dnspython >= 2.3",
     "beautifulsoup4 >= 4",
     "pydub >= 0.25",
     "arrow >= 1.2",
     "booru >= 1.0",
-    "lxml >= 4.9"
+    "lxml >= 4.9",
+    "python-decouple >= 3.8"
 ]
 
 [project.urls]
@@ -38,9 +37,6 @@ write_to = "comrade/_version.py"
 
 [tool.setuptools]
 packages = ["comrade"]
-
-[tool.isort]
-profile = "black"
 
 [tool.black]
 line-length = 80

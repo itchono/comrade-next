@@ -1,13 +1,11 @@
-import logging
-from os import getenv
-from typing import Any
-
 import arrow
 from aiohttp import ClientSession
-from interactions import MISSING, Client, listen, logger_name
+from interactions import MISSING, Client, listen
 from pymongo import MongoClient
 from pymongo.database import Database
 
+from comrade._version import __version__
+from comrade.core.configuration import DEBUG_SCOPE, MONGODB_URI, TIMEZONE
 from comrade.core.const import CLIENT_INIT_KWARGS
 
 
@@ -19,16 +17,15 @@ class Comrade(Client):
     ---------------
     - MongoDB connection
     - Configuration store
-    - logging
     - uptime as Arrow type
     """
 
     db: Database
-    timezone: str
-    logger: logging.Logger = logging.getLogger(logger_name)
+    timezone: str = TIMEZONE
+    notify_on_restart: int = 0  # Channel ID to notify on restart
 
     def __init__(self, *args, **kwargs):
-        if (debug_scope := getenv("COMRADE_DEBUG_SCOPE")) is None:
+        if (debug_scope := DEBUG_SCOPE) == 0:
             debug_scope = MISSING
 
         # Init Interactions.py Bot class
@@ -36,29 +33,27 @@ class Comrade(Client):
             *args, debug_scope=debug_scope, **CLIENT_INIT_KWARGS, **kwargs
         )
 
+        self.logger.info(f"Starting Comrade version {__version__}")
+
         # Comrade-specific init
-
-        # Connect to MongoDB
-        # must parse the password to avoid issues with special characters
-        try:
-            mongokey = kwargs["mongodb_key"]
-        except KeyError:
-            mongokey = getenv("COMRADE_MONGODB_KEY")
-
-        try:
-            timezone = kwargs["timezone"]
-        except KeyError:
-            timezone = getenv("COMRADE_TIMEZONE")
-
-        mongo_client = MongoClient(mongokey)
+        mongo_client = MongoClient(MONGODB_URI)  # Connect to MongoDB
         self.db = mongo_client[mongo_client.list_database_names()[0]]
         self.logger.info(f"Connected to MongoDB, database name: {self.db.name}")
 
-        self.timezone = timezone
+        if kwargs.get("notify_on_restart"):
+            self.notify_on_restart = kwargs["notify_on_restart"]
 
     @listen()
     async def on_ready(self):
         self.logger.info(f"Logged in as {self.user} ({self.user.id})")
+
+        if self.notify_on_restart:
+            self.logger.info(
+                f"Notifying on restart: Channel with ID {self.notify_on_restart}"
+            )
+            await self.get_channel(self.notify_on_restart).send(
+                f"Bot has restarted, current version is {__version__}."
+            )
 
     @property
     def http_session(self) -> ClientSession:
@@ -73,11 +68,3 @@ class Comrade(Client):
         if not (st := self._connection_state.start_time):
             return arrow.now(self.timezone)
         return arrow.Arrow.fromdatetime(st)
-
-    # override extension loading to log when an extension is loaded
-    def load_extension(
-        self, name: str, package: str | None = None, **load_kwargs: Any
-    ) -> None:
-        super().load_extension(name, package, **load_kwargs)
-
-        self.logger.info(f"Loaded extension: {name}")

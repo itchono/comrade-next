@@ -7,10 +7,22 @@ import sys
 from comrade.lib.updater_utils import get_current_branch
 
 
-def restart_process() -> None:
+def restart_process(notify_channel: int = None) -> None:
     """
-    Restart the bot with all the same arguments it was launched with.
+    Restart the bot with all the same arguments it was launched with,
+    except for the notify_channel argument.
+
+    Parameters
+    ----------
+    notify_channel : int
+        The channel ID to send a message to after restarting;
+        if None, no message will be sent.
     """
+    if notify_channel is not None:
+        os.execv(
+            sys.argv[0], sys.argv + ["--notify_channel", str(notify_channel)]
+        )
+
     os.execv(sys.argv[0], sys.argv)
 
 

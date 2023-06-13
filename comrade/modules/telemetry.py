@@ -5,7 +5,7 @@ from interactions.client.const import __version__ as __interactions_version__
 
 from comrade._version import __version_tuple__ as __comrade_version__
 from comrade.core.bot_subclass import Comrade
-from comrade.core.const import MAIN_COLOUR
+from comrade.core.configuration import ACCENT_COLOUR
 from comrade.lib.updater_utils import get_current_branch
 
 
@@ -14,7 +14,7 @@ class Telemetry(Extension):
 
     @slash_command(description="Gets the status of the bot")
     async def status(self, ctx: SlashContext):
-        embed = Embed(title="Bot Status", color=MAIN_COLOUR)
+        embed = Embed(title="Bot Status", color=ACCENT_COLOUR)
         embed.set_author(
             name=self.bot.user.username, icon_url=self.bot.user.avatar.url
         )
@@ -30,7 +30,7 @@ class Telemetry(Extension):
             value=f"{self.bot.latency * 1000:.2f} ms",
             inline=True,
         )
-        comrade_version = ".".join(map(str, __comrade_version__[:3]))
+        comrade_version = ".".join(map(str, __comrade_version__[:4]))
 
         embed.set_footer(
             text=f"Comrade v{comrade_version} on "
