@@ -49,11 +49,21 @@ class Comrade(Client):
 
         if self.notify_on_restart:
             self.logger.info(
-                f"Notifying on restart: Channel with ID {self.notify_on_restart}"
+                f"Notifying on restart: Channel/User with ID {self.notify_on_restart}"
             )
-            await self.get_channel(self.notify_on_restart).send(
+
+            restart_msg = (
                 f"Bot has restarted, current version is {__version__}."
             )
+
+            if channel := self.get_channel(self.notify_on_restart):
+                await channel.send(restart_msg)
+            elif user := self.get_user(self.notify_on_restart):
+                await user.send(restart_msg)
+            else:
+                self.logger.warning(
+                    f"Could not find channel or user with ID {self.notify_on_restart}"
+                )
 
     @property
     def http_session(self) -> ClientSession:
@@ -67,4 +77,4 @@ class Comrade(Client):
         """
         if not (st := self._connection_state.start_time):
             return arrow.now(self.timezone)
-        return arrow.Arrow.fromdatetime(st)
+        return arrow.Arrow.fromdatetime(st, self.timezone)
