@@ -10,5 +10,3 @@ CLIENT_INIT_KWARGS = {
     "sync_ext": True,
     "delete_unused_application_cmds": True,
 }
-
-MAIN_COLOUR = 0xD7342A  # Red

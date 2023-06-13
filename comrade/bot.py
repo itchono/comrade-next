@@ -1,25 +1,44 @@
-from os import getenv
+import logging
+from argparse import ArgumentParser
 from pathlib import Path
 
-import dotenv
+from interactions import logger_name as interactions_logger_name
 from interactions.client.const import CLIENT_FEATURE_FLAGS
+from interactions.ext import prefixed_commands
 
 from comrade.core.bot_subclass import Comrade
+from comrade.core.configuration import BOT_TOKEN, LOGGER_NAME
 from comrade.core.init_logging import init_logging
-
-# Load environment variables
-env_path = Path(__file__).parent.parent / ".env"
-dotenv.load_dotenv(dotenv_path=env_path)
 
 
 def main(token: str = None):
+    # Parse command line arguments
+    parser = ArgumentParser(description="Comrade Bot")
+    parser.add_argument(
+        "--notify_channel",
+        type=int,
+        help="Send a message to the channel with this ID after startup",
+    )
+    parser.parse_args()
+
     # Load env vars, if needed
     if token is None:
-        token = getenv("COMRADE_TOKEN")
+        token = BOT_TOKEN
 
-    init_logging("comrade")
+    init_logging(
+        interactions_logger_name,
+        console_logging_level=logging.WARNING,
+        file_logging_level=logging.INFO,
+    )
+    init_logging(
+        LOGGER_NAME,
+        file_logging_level=logging.INFO,
+        console_logging_level=logging.INFO,
+    )
 
     bot = Comrade()
+
+    prefixed_commands.setup(bot)
 
     # Temp workaround for discord API image upload bug
     CLIENT_FEATURE_FLAGS["FOLLOWUP_INTERACTIONS_FOR_IMAGES"] = True
