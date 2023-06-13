@@ -19,13 +19,8 @@ def restart_process(notify_channel: int = None) -> None:
         if None, no message will be sent.
     """
     if notify_channel is not None:
-        os.execl(
-            sys.executable,
-            sys.executable,
-            "-m",
-            "comrade",
-            "--notify_channel",
-            str(notify_channel),
+        os.execv(
+            sys.argv[0], sys.argv + ["--notify_channel", str(notify_channel)]
         )
 
     os.execv(sys.argv[0], sys.argv)

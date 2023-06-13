@@ -30,7 +30,7 @@ class Telemetry(Extension):
             value=f"{self.bot.latency * 1000:.2f} ms",
             inline=True,
         )
-        comrade_version = ".".join(map(str, __comrade_version__[:3]))
+        comrade_version = ".".join(map(str, __comrade_version__[:4]))
 
         embed.set_footer(
             text=f"Comrade v{comrade_version} on "
