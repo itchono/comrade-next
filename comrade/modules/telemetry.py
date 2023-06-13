@@ -1,5 +1,6 @@
 from platform import python_version
 
+import arrow
 from interactions import Embed, Extension, File, SlashContext, slash_command
 from interactions.client.const import __version__ as __interactions_version__
 
@@ -20,8 +21,10 @@ class Telemetry(Extension):
         )
 
         embed.add_field(
-            name="Started",
-            value=self.bot.start_time.humanize(),
+            name="Uptime",
+            value=arrow.now(self.bot.timezone).humanize(
+                self.bot.start_time, only_distance=True
+            ),
             inline=True,
         )
 
