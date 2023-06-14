@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 import arrow
 import orjson
 from aiohttp import ClientSession
-from interactions import MISSING, Client, listen
+from interactions import MISSING, Activity, ActivityType, Client, listen
 from pymongo import MongoClient
 from pymongo.database import Database
 
@@ -41,6 +41,9 @@ class Comrade(Client):
         super().__init__(
             *args,
             debug_scope=debug_scope,
+            activity=Activity.create(
+                name="the proletariat", type=ActivityType.WATCHING
+            ),
             **CLIENT_INIT_KWARGS,
             **kwargs,
         )

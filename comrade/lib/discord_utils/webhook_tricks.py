@@ -1,54 +1,18 @@
 # Send messages using webhooks as different users
 
+from logging import getLogger
+from typing import Optional
 
-from inspect import Signature, signature
-from typing import Callable, Optional, TypeVar
+from interactions import (
+    GuildText,
+    Member,
+    Message,
+    Webhook,
+    errors,
+    logger_name,
+)
 
-from interactions import GuildText, Member, Message, Webhook, errors
-
-_TFunc = TypeVar("_TFunc", bound=Callable[..., Message])
-
-
-def patch_signature_to_match_message_send(func: _TFunc) -> _TFunc:
-    """
-    Patch the signature of a function to match `interactions.Message.send`.
-    """
-
-    wh_send_signature = signature(Webhook.send)
-
-    # we can get rid of the first parameter, `self`,
-    # as well as `username` and `avatar_url`
-    wh_send_params = list(
-        filter(
-            lambda p: p.name not in ("self", "username", "avatar_url"),
-            wh_send_signature.parameters.values(),
-        )
-    )
-
-    # get signature of func, removing **kwargs
-    func_signature = signature(func)
-    func_params = list(func_signature.parameters.values())[:-1]
-
-    new_signature = Signature(func_params + wh_send_params)
-    func.__signature__ = new_signature
-
-    return func
-
-
-def patch_annotation(func: _TFunc) -> _TFunc:
-    """
-    Patch the docstring and annotations of a function to match
-    `interactions.Message.send`, similar to `patch_signature_to_match_message_send`.
-    """
-
-    wh_send_annotations = Webhook.send.__annotations__
-
-    for key in ["return", "self", "username", "avatar_url"]:
-        wh_send_annotations.pop(key, None)
-
-    func.__annotations__.update(wh_send_annotations)
-
-    return func
+_logger = getLogger(logger_name)
 
 
 async def get_channel_webhook(channel: GuildText) -> Webhook:
@@ -67,8 +31,11 @@ async def get_channel_webhook(channel: GuildText) -> Webhook:
     """
     # the webhook needs to be owned by the bot
     try:
-        valid_webhooks = filter(
-            lambda w: w.user == channel.guild.me, await channel.fetch_webhooks()
+        valid_webhooks = list(
+            filter(
+                lambda w: w.user_id == channel.guild.me.id,
+                await channel.fetch_webhooks(),
+            )
         )
     except errors.Forbidden:
         raise RuntimeError(
@@ -76,13 +43,12 @@ async def get_channel_webhook(channel: GuildText) -> Webhook:
         )
 
     if not valid_webhooks:
+        _logger.warning(f"Creating webhook in {channel.name}")
         return await channel.create_webhook(name="Comrade")
     else:
-        return next(valid_webhooks)
+        return valid_webhooks[0]
 
 
-@patch_annotation
-@patch_signature_to_match_message_send
 async def send_channel_webhook(
     channel: GuildText, username: str, avatar_url: str, **kwargs
 ) -> Message:
@@ -112,8 +78,6 @@ async def send_channel_webhook(
     )
 
 
-@patch_annotation
-@patch_signature_to_match_message_send
 async def echo(
     channel: GuildText,
     member: Member,
