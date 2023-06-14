@@ -1,3 +1,5 @@
+from zoneinfo import ZoneInfo
+
 import arrow
 import orjson
 from aiohttp import ClientSession
@@ -102,7 +104,12 @@ class Comrade(Client):
     def start_time(self) -> arrow.Arrow:
         """
         The start time of the bot, as an Arrow instance.
+
+        Timezone is set to the bot's timezone.
         """
         if not (st := self._connection_state.start_time):
             return arrow.now(self.timezone)
-        return arrow.Arrow.fromdatetime(st, "UTC")
+
+        # ensure that st is localized to our timezone (because it defaults to whatever
+        # the system timezone is)
+        return arrow.Arrow.fromdatetime(st.astimezone(ZoneInfo(self.timezone)))
