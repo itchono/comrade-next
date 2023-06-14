@@ -1,7 +1,7 @@
 from interactions import Extension, SlashContext, check, is_owner, slash_command
 from interactions.ext.prefixed_commands import PrefixedContext, prefixed_command
 
-from comrade._version import __version__
+from comrade import __version__
 from comrade.core.updater import pull_repo, restart_process, update_packages
 from comrade.lib.updater_utils import (
     check_updates_on_branch,
