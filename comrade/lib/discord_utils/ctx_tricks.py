@@ -1,23 +1,45 @@
-from interactions import ComponentContext, Message, MessageableMixin, Snowflake
+from collections import UserDict
+from typing import TypeVar
+
+from interactions import BaseContext, Snowflake
+
+# Type variable for values in ContextDict
+_VT = TypeVar("_VT")
 
 
-def multi_ctx_dispatch(
-    msg_ctx: Message | ComponentContext,
-) -> tuple[MessageableMixin, Snowflake]:
+def context_id(ctx: BaseContext) -> Snowflake:
     """
-    Turns a message or component context into a messageable and channel id.
+    Unique identifier for a given context's channel
+    which works for both guild and DM channels
 
     Parameters
     ----------
-    msg_ctx : Message | ComponentContext
-        The message or component context to dispatch.
+    ctx : BaseContext
+        The context to get the id from.
 
     Returns
     -------
-    tuple[MessageableMixin, Snowflake]
-        The messageable and channel id.
+    Snowflake
+        Either the channel_id if the context is in a guild,
+        or the author_id if the context is in a DM.
     """
-    if isinstance(msg_ctx, Message):
-        return msg_ctx.channel, msg_ctx.channel.id
-    else:
-        return msg_ctx, msg_ctx.channel_id
+    if ctx.guild_id:
+        return ctx.channel_id
+    return ctx.author_id
+
+
+class ContextDict(UserDict[BaseContext, _VT]):
+    """
+    Dictionary subclass whose keys
+    are derived from BaseContext instances.
+
+    Converts the context to a unique identifier
+    per-channel, useful for caching results or sessions
+    in guild channels and DMs.
+    """
+
+    def __setitem__(self, key: BaseContext, value: _VT):
+        return super().__setitem__(context_id(key), value)
+
+    def __getitem__(self, key: BaseContext) -> _VT:
+        return super().__getitem__(context_id(key))
