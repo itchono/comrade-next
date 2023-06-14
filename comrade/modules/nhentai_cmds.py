@@ -303,10 +303,10 @@ class NHentai(Extension):
             options = [
                 StringSelectOption(
                     label=text_safe_length(
-                        f"{num+1+numbering_offset}. ({gid}) {short_title}", 100
+                        f"{num+1+numbering_offset}. {short_title}", 100
                     ),
                     value=str(gid),
-                    description=text_safe_length(title_block, 100),
+                    description=text_safe_length(f"({gid}) {title_block}", 100),
                 )
                 for num, (gid, short_title, title_block) in enumerate(
                     id_name_iter
