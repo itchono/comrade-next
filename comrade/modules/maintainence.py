@@ -1,7 +1,7 @@
 from interactions import Extension, SlashContext, check, is_owner
 from interactions.ext.prefixed_commands import PrefixedContext, prefixed_command
 
-from comrade import __version__
+from comrade._version import __version__
 from comrade.core.updater import pull_repo, restart_process, update_packages
 from comrade.lib.discord_utils import context_id
 from comrade.lib.updater_utils import (

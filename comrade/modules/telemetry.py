@@ -4,7 +4,7 @@ import arrow
 from interactions import Embed, Extension, File, SlashContext, slash_command
 from interactions.client.const import __version__ as __interactions_version__
 
-from comrade import __version__ as __comrade_version__
+from comrade._version import __version__ as __comrade_version__
 from comrade.core.bot_subclass import Comrade
 from comrade.core.configuration import ACCENT_COLOUR
 from comrade.lib.updater_utils import get_current_branch

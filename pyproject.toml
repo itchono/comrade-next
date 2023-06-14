@@ -32,6 +32,9 @@ test = [
     "pytest-asyncio >= 0.21"
 ]
 
+[tool.setuptools_scm]
+write_to = "comrade/_version.py"
+
 [tool.setuptools]
 packages = ["comrade"]
 
