@@ -1,10 +1,15 @@
 from interactions import (
+    BaseContext,
+    ComponentContext,
     Embed,
     Extension,
     OptionType,
     Permissions,
     Role,
     SlashContext,
+    StringSelectMenu,
+    StringSelectOption,
+    component_callback,
     slash_command,
     slash_default_member_permission,
     slash_option,
@@ -12,13 +17,14 @@ from interactions import (
 from pymongo.errors import DuplicateKeyError
 
 from comrade.core.bot_subclass import Comrade
+from comrade.lib.text_utils import text_safe_length
 
 
 class RoleManager(Extension):
     bot: Comrade
 
     @slash_command(
-        name="role_manage",
+        name="rolemanager",
         description="Manage roles",
         sub_cmd_name="mark_joinable",
         sub_cmd_description="Mark a role as joinable",
@@ -60,7 +66,7 @@ class RoleManager(Extension):
             )
 
     @slash_command(
-        name="role_manage",
+        name="rolemanager",
         description="Manage roles",
         sub_cmd_name="unmark_joinable",
         sub_cmd_description="Unmark a role as joinable",
@@ -96,9 +102,9 @@ class RoleManager(Extension):
             )
 
     @slash_command(
-        name="role_manage",
+        name="rolemanager",
         description="Manage roles",
-        sub_cmd_name="del_removed_roles",
+        sub_cmd_name="del_removed",
         sub_cmd_description="Deletes roles no longer in the server",
     )
     @slash_default_member_permission(Permissions.MANAGE_ROLES)
@@ -132,85 +138,33 @@ class RoleManager(Extension):
             ephemeral=True,
         )
 
-    @slash_command(
-        name="role",
-        description="Manage roles",
-        sub_cmd_name="join",
-        sub_cmd_description="Join a role in the server",
-    )
-    @slash_option(
-        name="role",
-        description="The role to join",
-        opt_type=OptionType.ROLE,
-        required=True,
-    )
-    async def join_role(self, ctx: SlashContext, role: Role):
+    def role_menu(self, ctx: BaseContext) -> StringSelectMenu:
         """
-        Join a role in the server
-
-        Adds a role to the user's roles.
+        Gets all joinable roles in a guild in the menu
         """
+        joinable_roles = self.bot.db.roles.find({"guild_id": ctx.guild.id})
 
-        # Ensure the role is joinable
-        if self.bot.db.roles.find_one({"_id": role.id}) is None:
-            await ctx.send(
-                f"{role.mention} is not joinable, "
-                "run `/roles list` for a list of joinable roles.",
-                ephemeral=True,
+        roles = [ctx.guild.get_role(role["_id"]) for role in joinable_roles]
+
+        options = [
+            StringSelectOption(
+                label=text_safe_length(role.name, 100),
+                value=role.id,
+                description="You already have this role. Click to leave."
+                if role.id in ctx.author._role_ids
+                else "Click to join",
             )
-            return
+            for role in roles
+        ]
 
-        # Ensure the user doesn't already have the role
-        if role in ctx.author.roles:
-            await ctx.send(f"You already have {role.mention}", ephemeral=True)
-            return
-
-        # Add the role to the user
-        await ctx.author.add_roles([role])
-        await ctx.send(f"Added {role.mention}", ephemeral=True)
+        return StringSelectMenu(
+            options,
+            custom_id="role_manager",
+            placeholder="Select a role to join/leave",
+        )
 
     @slash_command(
-        name="role",
-        description="Manage roles",
-        sub_cmd_name="leave",
-        sub_cmd_description="Leave a role in the server",
-    )
-    @slash_option(
-        name="role",
-        description="The role to leave",
-        opt_type=OptionType.ROLE,
-        required=True,
-    )
-    async def leave_role(self, ctx: SlashContext, role: Role):
-        """
-        Leave a role in the server
-
-        Removes a role from the user's roles.
-        """
-
-        # Ensure the role is joinable
-        if self.bot.db.roles.find_one({"_id": role.id}) is None:
-            await ctx.send(
-                f"{role.mention} is not leaveable",
-                "run `/roles list` for a list of joinable/leaveable roles.",
-                ephemeral=True,
-            )
-            return
-
-        # Ensure the user has the role
-        if role not in ctx.author.roles:
-            await ctx.send(f"You don't have {role.mention}", ephemeral=True)
-            return
-
-        # Remove the role from the user
-        await ctx.author.remove_roles([role])
-        await ctx.send(f"Removed {role.mention}", ephemeral=True)
-
-    @slash_command(
-        name="role",
-        description="Manage roles",
-        sub_cmd_name="list",
-        sub_cmd_description="List all joinable roles",
+        name="roles", description="List all joinable roles", dm_permission=False
     )
     async def list_roles(self, ctx: SlashContext):
         """
@@ -219,15 +173,61 @@ class RoleManager(Extension):
 
         joinable_roles = self.bot.db.roles.find({"guild_id": ctx.guild.id})
 
-        mention_strs = [f"<@&{role['_id']}>" for role in joinable_roles]
+        roles = [ctx.guild.get_role(role["_id"]) for role in joinable_roles]
+
+        if len(roles) == 0:
+            await ctx.send(
+                "There are no joinable roles in this server",
+                ephemeral=True,
+            )
+            return
+
+        mention_strs = [role.mention for role in roles]
 
         embed = Embed("Joinable Roles", "\n".join(mention_strs))
 
         embed.set_footer(
-            text="Use /role join to join a role, and /role leave to leave a role"
+            text="Use the menu below to join/leave roles",
         )
 
-        await ctx.send(embed=embed, ephemeral=True)
+        menu = self.role_menu(ctx)
+
+        await ctx.send(embed=embed, ephemeral=True, components=[menu])
+
+    @component_callback("role_manager")
+    async def role_manager_callback(self, ctx: ComponentContext):
+        """
+        Callback for the role manager menu
+        """
+
+        # Get the role from the menu
+        role = ctx.guild.get_role(int(ctx.values[0]))
+
+        if role is None:
+            # This should never happen
+            await ctx.send(
+                f"<@&{ctx.values[0]}> is not a valid role", ephemeral=True
+            )
+
+        # Ensure the role is joinable
+        if self.bot.db.roles.find_one({"_id": role.id}) is None:
+            # This should never happen
+            await ctx.send(
+                f"{role.mention} is not joinable/leaveable",
+                ephemeral=True,
+            )
+            return
+
+        # Ensure the user doesn't already have the role
+        if role in ctx.author.roles:
+            await ctx.author.remove_roles([role])
+            result = f"Removed {role.mention}"
+        else:
+            await ctx.author.add_roles([role])
+            result = f"Added {role.mention}"
+
+        # Update the role menu, now that the user has joined/leaved a role
+        await ctx.edit_origin(components=self.role_menu(ctx), content=result)
 
 
 def setup(bot: Comrade):
