@@ -7,7 +7,7 @@ from interactions import MISSING, Client, listen
 from pymongo import MongoClient
 from pymongo.database import Database
 
-from comrade import __version__
+from comrade._version import __version__
 from comrade.core.configuration import DEBUG_SCOPE, MONGODB_URI, TIMEZONE
 from comrade.core.const import CLIENT_INIT_KWARGS
 
