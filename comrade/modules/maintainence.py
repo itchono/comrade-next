@@ -1,4 +1,4 @@
-from interactions import Extension, SlashContext, check, is_owner, slash_command
+from interactions import Extension, SlashContext, check, is_owner
 from interactions.ext.prefixed_commands import PrefixedContext, prefixed_command
 
 from comrade import __version__
@@ -16,7 +16,7 @@ class Maintainence(Extension):
     Commands used for maintainence of the bot.
     """
 
-    @slash_command(description="Restarts the bot")
+    @prefixed_command(help="Restarts the bot")
     @check(is_owner())
     async def restart(self, ctx: SlashContext):
         """
@@ -26,7 +26,7 @@ class Maintainence(Extension):
         self.bot.logger.warning("RESTARTING BOT!")
         restart_process(context_id(ctx))
 
-    @slash_command(description="Checks for updates on this git branch")
+    @prefixed_command(help="Checks for updates on this git branch")
     async def check_updates(self, ctx: SlashContext):
         """
         Checks for updates on this git branch.

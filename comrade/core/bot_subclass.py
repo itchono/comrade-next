@@ -57,8 +57,11 @@ class Comrade(Client):
 
     @listen()
     async def on_login(self):
+        """
+        Hook onto the first even in the asyncio loop in order
+        to initialize the aiohttp ClientSession.
+        """
         self.http_session = ClientSession(json_serialize=orjson.dumps)
-        self.logger.info("Created HTTP session")
 
     @listen()
     async def on_ready(self):

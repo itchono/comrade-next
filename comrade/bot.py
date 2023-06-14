@@ -7,7 +7,7 @@ from interactions.client.const import CLIENT_FEATURE_FLAGS
 from interactions.ext import prefixed_commands
 
 from comrade.core.bot_subclass import Comrade
-from comrade.core.configuration import BOT_TOKEN, DEBUG
+from comrade.core.configuration import ACCENT_COLOUR, BOT_TOKEN, DEBUG
 from comrade.core.init_logging import init_logging
 
 
@@ -22,7 +22,6 @@ def main(token: str = None):
     )
     args = parser.parse_args()
 
-    # Load env vars, if needed
     if token is None:
         token = BOT_TOKEN
 
@@ -44,6 +43,11 @@ def main(token: str = None):
         if module.stem == "__init__":
             continue
         bot.load_extension(f"comrade.modules.{module.stem}")
+
+    help_cmd = prefixed_commands.help.PrefixedHelpCommand(
+        bot, embed_color=ACCENT_COLOUR
+    )
+    help_cmd.register()
 
     if DEBUG:
         bot.load_extension("interactions.ext.jurigged")

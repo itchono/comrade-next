@@ -49,7 +49,7 @@ class Telemetry(Extension):
     @slash_command(
         description="Gets the log for the bot",
     )
-    async def view_log(self, ctx: SlashContext):
+    async def log(self, ctx: SlashContext):
         log_path = self.bot.logger.handlers[1].baseFilename
 
         log_file = File(log_path, file_name="comrade_log.txt")
