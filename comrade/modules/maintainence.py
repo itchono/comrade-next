@@ -1,8 +1,9 @@
-from interactions import Extension, SlashContext, check, is_owner, slash_command
+from interactions import Extension, SlashContext, check, is_owner
 from interactions.ext.prefixed_commands import PrefixedContext, prefixed_command
 
-from comrade._version import __version__
+from comrade import __version__
 from comrade.core.updater import pull_repo, restart_process, update_packages
+from comrade.lib.discord_utils import context_id
 from comrade.lib.updater_utils import (
     check_updates_on_branch,
     get_current_branch,
@@ -15,7 +16,7 @@ class Maintainence(Extension):
     Commands used for maintainence of the bot.
     """
 
-    @slash_command(description="Restarts the bot")
+    @prefixed_command(help="Restarts the bot")
     @check(is_owner())
     async def restart(self, ctx: SlashContext):
         """
@@ -23,9 +24,9 @@ class Maintainence(Extension):
         """
         await ctx.send("Restarting...", ephemeral=True)
         self.bot.logger.warning("RESTARTING BOT!")
-        restart_process(ctx.channel_id)
+        restart_process(context_id(ctx))
 
-    @slash_command(description="Checks for updates on this git branch")
+    @prefixed_command(help="Checks for updates on this git branch")
     async def check_updates(self, ctx: SlashContext):
         """
         Checks for updates on this git branch.
@@ -87,7 +88,7 @@ class Maintainence(Extension):
 
         await ctx.send("Restarting bot...", ephemeral=True)
         self.bot.logger.warning("RESTARTING BOT FOR NEW UPDATE...")
-        restart_process(ctx.channel_id)
+        restart_process(context_id(ctx))
 
 
 def setup(bot):

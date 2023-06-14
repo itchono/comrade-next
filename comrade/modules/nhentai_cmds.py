@@ -20,9 +20,10 @@ from interactions import (
     slash_option,
 )
 from interactions.api.events import MessageCreate
+from interactions.ext.prefixed_commands import PrefixedContext
 
 from comrade.core.bot_subclass import Comrade
-from comrade.lib.discord_utils import DynamicPaginator, multi_ctx_dispatch
+from comrade.lib.discord_utils import ContextDict, DynamicPaginator, context_id
 from comrade.lib.nhentai.page_parser import (
     has_search_results_soup,
     parse_gallery_from_page,
@@ -39,8 +40,8 @@ from comrade.lib.text_utils import text_safe_length
 
 class NHentai(Extension):
     bot: Comrade
-    gallery_sessions: dict[int, NHentaiGallerySession] = {}
-    search_sessions: dict[int, NHentaiSearchSession] = {}
+    gallery_sessions: ContextDict[NHentaiGallerySession] = ContextDict()
+    search_sessions: ContextDict[NHentaiSearchSession] = ContextDict()
 
     async def init_gallery_session(
         self,
@@ -69,7 +70,7 @@ class NHentai(Extension):
         session = NHentaiGallerySession(
             ctx.author_id, nh_gallery, spoiler_imgs=spoiler_imgs
         )
-        self.gallery_sessions[ctx.channel_id] = session
+        self.gallery_sessions[ctx] = session
 
         if not send_embed:
             return
@@ -145,10 +146,10 @@ class NHentai(Extension):
             maximum_num_pages,
         )
 
-        self.search_sessions[ctx.channel_id] = nh_search_session
+        self.search_sessions[ctx] = nh_search_session
 
         callback = self.selector_menu_callback(
-            nh_search_session, ctx.channel_id
+            nh_search_session, context_id(ctx)
         )
 
         paginator = DynamicPaginator(
@@ -159,7 +160,7 @@ class NHentai(Extension):
 
     async def handle_nhentai_next_page(
         self,
-        msg_ctx: Message | ComponentContext,
+        ctx: PrefixedContext | ComponentContext,
         session: NHentaiGallerySession,
     ):
         """
@@ -170,18 +171,17 @@ class NHentai(Extension):
 
         Parameters
         ----------
-        msg_ctx: Message | ComponentContext
-            The message or component context calling the command
+        ctx: PrefixedContext | ComponentContext
+            The context object, originating either from a button or channel message
         session: NHentaiGallerySession
             The gallery session
 
         """
-        sendable, channel_id = multi_ctx_dispatch(msg_ctx)
 
         # Check if there are more pages
         if not session.advance_page():
-            await sendable.send("No more results found.")
-            del self.gallery_sessions[channel_id]
+            await ctx.send("No more results found.")
+            del self.gallery_sessions[ctx]
             return
 
         # Request and send the image
@@ -189,7 +189,7 @@ class NHentai(Extension):
             img_bytes = BytesIO(await resp.read())
         img_file = File(img_bytes, file_name=session.current_page_filename)
 
-        await sendable.send(file=img_file, components=[self.next_page_button])
+        await ctx.send(file=img_file, components=[self.next_page_button])
 
     @component_callback(re.compile(r"nhentai_search_(\d+)"))
     async def nhentai_search_callback(self, ctx: ComponentContext):
@@ -219,7 +219,7 @@ class NHentai(Extension):
     async def nhentai_np_callback(self, ctx: ComponentContext):
         try:
             # Locate the session
-            nh_gallery_session = self.gallery_sessions[ctx.channel_id]
+            nh_gallery_session = self.gallery_sessions[ctx]
             await self.handle_nhentai_next_page(ctx, nh_gallery_session)
 
         except KeyError:
@@ -236,21 +236,23 @@ class NHentai(Extension):
         Listens for "np" in channels where a gallery session is active.
         """
         message: Message = message_event.message
-        try:
-            # Locate the session
-            nh_gallery_session = self.gallery_sessions[message.channel.id]
 
-            if message.content.lower() == "np":
-                await self.handle_nhentai_next_page(message, nh_gallery_session)
+        match message.content.lower():
+            case "np":
+                try:
+                    ctx = PrefixedContext.from_message(self.bot, message)
+                    # Locate the session
+                    nh_gallery_session = self.gallery_sessions[ctx]
+                    await self.handle_nhentai_next_page(ctx, nh_gallery_session)
 
-        except KeyError:
-            # No session active
-            pass
+                except KeyError:
+                    # No session active
+                    pass
 
     def selector_menu_callback(
         self,
         search_session: NHentaiSearchSession,
-        channel_id: int,
+        context_id: int,
     ) -> Callable[[int], Awaitable[tuple[list[ActionRow], str]]]:
         """
         Returns a callback used inside the DynamicPaginator
@@ -261,8 +263,8 @@ class NHentai(Extension):
         search_session: NHentaiSearchSession
             The search session
 
-        channel_id: int
-            The channel ID of the search session
+        context_id: int
+            The channel ID of the search session (either guild or DM)
 
         Returns
         -------
@@ -278,9 +280,6 @@ class NHentai(Extension):
 
             Assumes that the page has not been requested before.
             """
-            self.bot.logger.info(
-                f"Fetching results page {page_num} for channel {channel_id}"
-            )
             # Get the page
             page = await get_search_page(
                 search_session.query, page_num, self.bot.http_session
@@ -317,7 +316,7 @@ class NHentai(Extension):
             # Give the user a menu to select from
             menu = StringSelectMenu(
                 options,
-                custom_id=f"nhentai_search_{channel_id}",
+                custom_id=f"nhentai_search_{context_id}",
                 placeholder=f"Select a gallery from page {page_num}",
             )
 

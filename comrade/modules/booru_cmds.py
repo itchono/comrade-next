@@ -16,14 +16,15 @@ from interactions import (
     slash_option,
 )
 from interactions.api.events import MessageCreate
+from interactions.ext.prefixed_commands import PrefixedContext
 from orjson import loads
 
 from comrade.lib.booru_lib import BOORUS, BooruSession
-from comrade.lib.discord_utils import multi_ctx_dispatch
+from comrade.lib.discord_utils import ContextDict
 
 
 class Booru(Extension):
-    booru_sessions: dict[int, BooruSession] = {}
+    booru_sessions: ContextDict[BooruSession] = ContextDict()
 
     @slash_command(description="Gets a random image from a booru", nsfw=True)
     @slash_option(
@@ -70,7 +71,7 @@ class Booru(Extension):
         if not await booru_session.init_posts(0):
             return await ctx.send("No results found.", ephemeral=True)
 
-        self.booru_sessions[ctx.channel_id] = booru_session
+        self.booru_sessions[ctx] = booru_session
 
         await ctx.send(
             embed=booru_session.formatted_embed,
@@ -113,7 +114,7 @@ class Booru(Extension):
         await ctx.send(to_send)
 
     async def handle_booru_next(
-        self, msg_ctx: Message | ComponentContext, session: BooruSession
+        self, ctx: PrefixedContext | ComponentContext, session: BooruSession
     ):
         """
         Handles the "next" command for booru sessions.
@@ -123,13 +124,11 @@ class Booru(Extension):
         message : Message
             The message to handle.
         """
-        sendable, channel_id = multi_ctx_dispatch(msg_ctx)
-
         if not await session.advance_post():
-            await sendable.send("No more results found.")
-            del self.booru_sessions[channel_id]
+            await ctx.send("No more results found.")
+            del self.booru_sessions[ctx]
             return
-        await sendable.send(
+        await ctx.send(
             embed=session.formatted_embed, components=[self.next_page_button]
         )
 
@@ -149,18 +148,21 @@ class Booru(Extension):
     async def booru_listener(self, message_event: MessageCreate):
         # Listen for "next" in channels where a booru session is active
         message: Message = message_event.message
-        try:
-            booru_session = self.booru_sessions[message.channel.id]
-            if message.content.lower() == "next":
-                await self.handle_booru_next(message, booru_session)
-        except KeyError:
-            pass
+
+        match message.content.lower():
+            case "next":
+                ctx = PrefixedContext.from_message(self.bot, message)
+                try:
+                    booru_session = self.booru_sessions[ctx]
+                    await self.handle_booru_next(ctx, booru_session)
+                except KeyError:
+                    pass
 
     @component_callback("booru_next")
     async def booru_next_callback(self, ctx: ComponentContext):
         try:
             # Locate the session
-            booru_session = self.booru_sessions[ctx.channel_id]
+            booru_session = self.booru_sessions[ctx]
             await self.handle_booru_next(ctx, booru_session)
 
         except KeyError:

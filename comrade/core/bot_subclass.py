@@ -1,10 +1,13 @@
+from zoneinfo import ZoneInfo
+
 import arrow
+import orjson
 from aiohttp import ClientSession
 from interactions import MISSING, Client, listen
 from pymongo import MongoClient
 from pymongo.database import Database
 
-from comrade._version import __version__
+from comrade import __version__
 from comrade.core.configuration import DEBUG_SCOPE, MONGODB_URI, TIMEZONE
 from comrade.core.const import CLIENT_INIT_KWARGS
 
@@ -17,12 +20,18 @@ class Comrade(Client):
     ---------------
     - MongoDB connection
     - Configuration store
+    - aiohttp ClientSession
     - uptime as Arrow type
+
+    Overrides
+    ---------
+    - Turns off on_..._completion listeners from interactions.py
     """
 
     db: Database
     timezone: str = TIMEZONE
     notify_on_restart: int = 0  # Channel ID to notify on restart
+    http_session: ClientSession
 
     def __init__(self, *args, **kwargs):
         if (debug_scope := DEBUG_SCOPE) == 0:
@@ -30,7 +39,10 @@ class Comrade(Client):
 
         # Init Interactions.py Bot class
         super().__init__(
-            *args, debug_scope=debug_scope, **CLIENT_INIT_KWARGS, **kwargs
+            *args,
+            debug_scope=debug_scope,
+            **CLIENT_INIT_KWARGS,
+            **kwargs,
         )
 
         self.logger.info(f"Starting Comrade version {__version__}")
@@ -44,8 +56,18 @@ class Comrade(Client):
             self.notify_on_restart = kwargs["notify_on_restart"]
 
     @listen()
+    async def on_login(self):
+        """
+        Hook onto the first even in the asyncio loop in order
+        to initialize the aiohttp ClientSession.
+        """
+        self.http_session = ClientSession(json_serialize=orjson.dumps)
+
+    @listen()
     async def on_ready(self):
-        self.logger.info(f"Logged in as {self.user} ({self.user.id})")
+        self.logger.info(
+            f"Bot is Ready. Logged in as {self.user} ({self.user.id})"
+        )
 
         if self.notify_on_restart:
             self.logger.info(
@@ -65,16 +87,32 @@ class Comrade(Client):
                     f"Could not find channel or user with ID {self.notify_on_restart}"
                 )
 
-    @property
-    def http_session(self) -> ClientSession:
-        # Hack to get the aiohttp session from the http client
-        return self.http._HTTPClient__session
+    @listen(disable_default_listeners=True)
+    async def on_command_completion(self, *args, **kwargs):
+        pass
+
+    @listen(disable_default_listeners=True)
+    async def on_component_completion(self, *args, **kwargs):
+        pass
+
+    @listen(disable_default_listeners=True)
+    async def on_autocomplete_completion(self, *args, **kwargs):
+        pass
+
+    @listen(disable_default_listeners=True)
+    async def on_modal_completion(self, *args, **kwargs):
+        pass
 
     @property
     def start_time(self) -> arrow.Arrow:
         """
         The start time of the bot, as an Arrow instance.
+
+        Timezone is set to the bot's timezone.
         """
         if not (st := self._connection_state.start_time):
             return arrow.now(self.timezone)
-        return arrow.Arrow.fromdatetime(st, self.timezone)
+
+        # ensure that st is localized to our timezone (because it defaults to whatever
+        # the system timezone is)
+        return arrow.Arrow.fromdatetime(st.astimezone(ZoneInfo(self.timezone)))
