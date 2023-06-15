@@ -1,24 +1,30 @@
 from platform import python_version
 
+import arrow
 from interactions import Embed, Extension, File, SlashContext, slash_command
-from interactions.client.const import __api_version__
 from interactions.client.const import __version__ as __interactions_version__
 
 from comrade._version import __version__ as __comrade_version__
 from comrade.core.bot_subclass import Comrade
+from comrade.core.configuration import ACCENT_COLOUR
+from comrade.lib.updater_utils import get_current_branch
 
 
 class Telemetry(Extension):
+    bot: Comrade
+
     @slash_command(description="Gets the status of the bot")
     async def status(self, ctx: SlashContext):
-        bot: Comrade = self.bot
-
-        embed = Embed(title="Bot Status", color=0xD7342A)
-        embed.set_author(name=bot.user.username, icon_url=bot.user.avatar.url)
+        embed = Embed(title="Bot Status", color=ACCENT_COLOUR)
+        embed.set_author(
+            name=self.bot.user.username, icon_url=self.bot.user.avatar.url
+        )
 
         embed.add_field(
-            name="Started",
-            value=bot.start_time.humanize(),
+            name="Uptime",
+            value=arrow.now(self.bot.timezone).humanize(
+                self.bot.start_time, only_distance=True
+            ),
             inline=True,
         )
 
@@ -28,11 +34,14 @@ class Telemetry(Extension):
             inline=True,
         )
 
+        # Drop the +... from the version
+        comrade_version = __comrade_version__.split("+")[0]
+
         embed.set_footer(
-            text=f"Comrade v{__comrade_version__} | "
+            text=f"Comrade v{comrade_version} on "
+            f"{get_current_branch()} | "
             f"Interactions v{__interactions_version__} | "
-            f"Python v{python_version()} | "
-            f"Discord API v{__api_version__}"
+            f"Python v{python_version()}"
         )
 
         await ctx.send(embed=embed)
@@ -40,7 +49,7 @@ class Telemetry(Extension):
     @slash_command(
         description="Gets the log for the bot",
     )
-    async def view_log(self, ctx: SlashContext):
+    async def log(self, ctx: SlashContext):
         log_path = self.bot.logger.handlers[1].baseFilename
 
         log_file = File(log_path, file_name="comrade_log.txt")

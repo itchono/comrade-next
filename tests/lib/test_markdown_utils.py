@@ -1,4 +1,4 @@
-from comrade.lib.markdown_utils import escape_md
+from comrade.lib.text_utils.markdown import escape_md
 
 
 def test_escape_md():

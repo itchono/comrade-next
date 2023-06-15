@@ -2,26 +2,31 @@ from urllib.parse import unquote
 
 from interactions import (
     AutocompleteContext,
+    Button,
+    ButtonStyle,
+    ComponentContext,
     Extension,
     Message,
     OptionType,
     SlashCommandChoice,
     SlashContext,
+    component_callback,
     listen,
     slash_command,
     slash_option,
 )
 from interactions.api.events import MessageCreate
+from interactions.ext.prefixed_commands import PrefixedContext
 from orjson import loads
 
 from comrade.lib.booru_lib import BOORUS, BooruSession
-from comrade.lib.checks import nsfw_channel
+from comrade.lib.discord_utils import ContextDict
 
 
 class Booru(Extension):
-    booru_sessions: dict[int, BooruSession] = {}
+    booru_sessions: ContextDict[BooruSession] = ContextDict()
 
-    @slash_command(description="Gets a random image from a booru")
+    @slash_command(description="Gets a random image from a booru", nsfw=True)
     @slash_option(
         name="booru_name",
         description="The booru to get the image from",
@@ -59,12 +64,6 @@ class Booru(Extension):
         tags : str
             The tags to search for.
         """
-        if not nsfw_channel(ctx) and booru_name != "safebooru":
-            return await ctx.send(
-                "This command can only be used in an NSFW channel.",
-                ephemeral=True,
-            )
-
         booru_obj = BOORUS[booru_name]()
         booru_session = BooruSession(booru_obj, tags, sort_random)
 
@@ -72,9 +71,12 @@ class Booru(Extension):
         if not await booru_session.init_posts(0):
             return await ctx.send("No results found.", ephemeral=True)
 
-        self.booru_sessions[ctx.channel_id] = booru_session
+        self.booru_sessions[ctx] = booru_session
 
-        await ctx.send(embed=booru_session.formatted_embed)
+        await ctx.send(
+            embed=booru_session.formatted_embed,
+            components=[self.next_page_button],
+        )
 
     @booru.autocomplete("tags")
     async def tags_autocomplete(self, ctx: AutocompleteContext):
@@ -103,7 +105,7 @@ class Booru(Extension):
         tags = loads(await booru_obj.find_tags(most_recent_tag))
 
         if not tags:
-            return await ctx.send([f" ".join(the_rest + [most_recent_tag])])
+            return await ctx.send([" ".join(the_rest + [most_recent_tag])])
 
         to_send = [
             f"{' '.join(the_rest + [unquote(tag)])}" for tag in tags[:10]
@@ -111,20 +113,65 @@ class Booru(Extension):
 
         await ctx.send(to_send)
 
+    async def handle_booru_next(
+        self, ctx: PrefixedContext | ComponentContext, session: BooruSession
+    ):
+        """
+        Handles the "next" command for booru sessions.
+
+        Parameters
+        ----------
+        message : Message
+            The message to handle.
+        """
+        if not await session.advance_post():
+            await ctx.send("No more results found.")
+            del self.booru_sessions[ctx]
+            return
+        await ctx.send(
+            embed=session.formatted_embed, components=[self.next_page_button]
+        )
+
+    @property
+    def next_page_button(self, disabled: bool = False):
+        """
+        Button used to advance pages in an nhentai gallery.
+        """
+        return Button(
+            style=ButtonStyle.PRIMARY,
+            label="Next Post",
+            custom_id="booru_next",
+            disabled=disabled,
+        )
+
     @listen("message_create")
     async def booru_listener(self, message_event: MessageCreate):
         # Listen for "next" in channels where a booru session is active
         message: Message = message_event.message
+
+        match message.content.lower():
+            case "next":
+                ctx = PrefixedContext.from_message(self.bot, message)
+                try:
+                    booru_session = self.booru_sessions[ctx]
+                    await self.handle_booru_next(ctx, booru_session)
+                except KeyError:
+                    pass
+
+    @component_callback("booru_next")
+    async def booru_next_callback(self, ctx: ComponentContext):
         try:
-            booru_session = self.booru_sessions[message.channel.id]
-            if message.content.lower() == "next":
-                if not await booru_session.advance_post():
-                    await message.channel.send("No more results found.")
-                    del self.booru_sessions[message.channel.id]
-                    return
-                await message.channel.send(embed=booru_session.formatted_embed)
+            # Locate the session
+            booru_session = self.booru_sessions[ctx]
+            await self.handle_booru_next(ctx, booru_session)
+
         except KeyError:
-            pass
+            # No session active
+            await ctx.send(
+                "This button was probably created in the past,"
+                " and its session has expired. Please start a new Booru session.",
+                ephemeral=True,
+            )
 
 
 def setup(bot):

@@ -1,45 +1,61 @@
 # Taken from https://github.com/NAFTeam/Bot-Template
 import logging
-import os
 import time
 from pathlib import Path
 from typing import Optional
 
-from interactions import logger_name
+import arrow
+
+from comrade.core.configuration import TIMEZONE
 
 
 class CustomLogger:
     """Log all errors to a file, and log all logging events to console"""
 
     def __init__(self):
-        # Time format: YYYY-MM-DD HH:MM:SS EST
+        # Time format: YYYY-MM-DD HH:MM:SS <timezone>
         # Logger format: [TIME] [LEVEL]: MESSAGE
 
+        timezone = TIMEZONE
+
         self.formatter = logging.Formatter(
-            "[%(asctime)s EST] [%(name)s] [%(levelname)s]: %(message)s",
+            "[%(asctime)s "
+            + timezone
+            + "] [%(name)s] [%(levelname)s]: %(message)s",
             "%Y-%m-%d %H:%M:%S",
         )
-        self.formatter.converter = time.localtime
+
+        def time_convert(*_) -> time.struct_time:
+            # Convert time to tz specified in .env
+            current_time = arrow.utcnow().to(timezone)
+            return current_time.timetuple()
+
+        self.formatter.converter = time_convert
 
         # Make sure the logs folder exists
-        os.makedirs("./logs", exist_ok=True)
+        Path("./logs").mkdir(parents=True, exist_ok=True)
 
-    def make_logger(self, log_name: str, output_filename: str):
+    def make_logger(
+        self,
+        log_name: str,
+        file_logging_level: int = logging.INFO,
+        console_logging_level: int = logging.INFO,
+    ):
         logger = logging.getLogger(log_name)
-        logger.setLevel(logging.INFO)
+        logger.setLevel(min(file_logging_level, console_logging_level))
 
         # log to console
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(self.formatter)
-        console_handler.setLevel(logging.INFO)
+        console_handler.setLevel(console_logging_level)
 
         # log to file
         file_handler = MakeFileHandler(
-            filepath=Path(f"./logs/{output_filename}.log"),
+            filepath=Path(f"./logs/{log_name}.log"),
             encoding="utf-8",
         )
         file_handler.setFormatter(self.formatter)
-        file_handler.setLevel(logging.INFO)
+        file_handler.setLevel(file_logging_level)
 
         # add bother handlers
         logger.addHandler(console_handler)
@@ -61,9 +77,13 @@ class MakeFileHandler(logging.FileHandler):
         logging.FileHandler.__init__(self, filepath, mode, encoding, delay)
 
 
-def init_logging(output_filename: str = logger_name):
+def init_logging(
+    logger_name: str,
+    file_logging_level: int = logging.INFO,
+    console_logging_level: int = logging.INFO,
+):
     # Initialize formatter
     logger = CustomLogger()
 
     # Initialize logging for exceptions
-    logger.make_logger(logger_name, output_filename)
+    logger.make_logger(logger_name, file_logging_level, console_logging_level)

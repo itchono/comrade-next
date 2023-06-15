@@ -10,14 +10,15 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 dynamic = ["version"]
 dependencies = [
-    "discord-py-interactions[speedup,voice,jurigged]",
-    "python-dotenv",
-    "pymongo",
-    "dnspython",
-    "beautifulsoup4",
-    "pydub",
-    "arrow",
-    "booru"
+    "interactions.py[speedup,voice,jurigged] == 5.6.0",
+    "pymongo >= 4.3",
+    "beautifulsoup4 >= 4",
+    "pydub >= 0.25",
+    "arrow >= 1.2",
+    "booru >= 1.0",
+    "lxml >= 4.9",
+    "python-decouple >= 3.8",
+    "levenshtein >= 0.21",
 ]
 
 [project.urls]
@@ -26,17 +27,21 @@ homepage = "https://github.com/itchono/comrade-next"
 [project.scripts]
 comrade = "comrade.bot:main"
 
+[project.optional-dependencies]
+test = [
+    "pytest >= 7.3",
+    "pytest-asyncio >= 0.21"
+]
+
 [tool.setuptools_scm]
 write_to = "comrade/_version.py"
 
 [tool.setuptools]
 packages = ["comrade"]
 
-[tool.isort]
-profile = "black"
-
 [tool.black]
 line-length = 80
 
 [tool.pytest.ini_options]
 filterwarnings = ["ignore::DeprecationWarning"]
+asyncio_mode = "auto"

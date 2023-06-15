@@ -1,4 +1,4 @@
-from comrade.lib.regional_indicator import (
+from comrade.lib.text_utils.regional_indicator import (
     regional_indicator_to_txt,
     txt_to_regional_indicator,
 )
