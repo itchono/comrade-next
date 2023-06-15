@@ -1,14 +1,9 @@
 from zoneinfo import ZoneInfo
 
-<<<<<<< HEAD
-from arrow import Arrow
-from interactions import MISSING, Client, listen, logger_name
-=======
 import arrow
 import orjson
 from aiohttp import ClientSession
 from interactions import MISSING, Activity, ActivityType, Client, listen
->>>>>>> origin/main
 from pymongo import MongoClient
 from pymongo.database import Database
 
