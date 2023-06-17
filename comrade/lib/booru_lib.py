@@ -117,7 +117,7 @@ class BooruSession:
             f"| Post {self.post_id + 1} | Type 'next' to advance"
         )
 
-        embed = Embed(title=self.query)
+        embed = Embed(title=text_safe_length(escape_md(self.query), 256))
         embed.set_image(url=file_url)
         embed.set_footer(text=footer_text)
 

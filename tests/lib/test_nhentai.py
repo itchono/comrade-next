@@ -29,7 +29,40 @@ from comrade.lib.nhentai.text_filters import filter_title_text
         ),
     ],
 )
-def test_title_parser(full_title, expected_title):
+def test_title_parser_nominal(full_title, expected_title):
+    assert filter_title_text(full_title) == expected_title
+
+
+def test_title_parser_no_title():
+    assert filter_title_text("[]") == ""
+    assert filter_title_text("[Artist]") == ""
+    assert filter_title_text("[Artist] []") == ""
+    assert filter_title_text("[Artist] ()") == ""
+    assert filter_title_text("[Artist] () []") == ""
+
+
+@pytest.mark.parametrize(
+    "full_title, expected_title",
+    [
+        (
+            "Nori5rou] Imaizumin-chi wa Douyara Gal"
+            " no Tamariba ni Natteru Rashii | IMAIZUMI BRINGS "
+            "ALL THE GYARUS TO HIS HOUSE [English] [Decensored]",
+            "Imaizumin-chi wa Douyara Gal"
+            " no Tamariba ni Natteru Rashii | IMAIZUMI BRINGS "
+            "ALL THE GYARUS TO HIS HOUSE",
+        ),
+        ("improperly closed]) title [English]", "title"),
+        (
+            "improperly closed 2) (not the title) title [English]",
+            "title",
+        ),
+    ],
+)
+def test_title_parser_difficult_cases(full_title, expected_title):
+    """
+    Cases where the brackets are not properly closed.
+    """
     assert filter_title_text(full_title) == expected_title
 
 
@@ -61,6 +94,26 @@ async def test_gallery_acquisition_nominal(
     )
 
     assert len(gallery) == 28
+
+    # Access all @property to ensure that they are not broken
+    assert gallery.url
+    assert gallery.cover_url
+    assert gallery.short_title
+    assert gallery.title_block_tags
+    assert gallery.start_embed
+
+
+async def length_1_gallery(http_session: aiohttp.ClientSession):
+    """
+    TODO: use this for integration tests in the future,
+    it's a good test case for getting the end of a gallery
+    """
+    gallery_id = 266745
+
+    page = await get_gallery_page(gallery_id, http_session)
+    gallery = parse_gallery_from_page(page)
+
+    assert len(gallery) == 1
 
 
 async def test_not_present_anywhere(http_session: aiohttp.ClientSession):
@@ -98,6 +151,13 @@ async def test_gallery_not_on_nhentai_to(http_session: aiohttp.ClientSession):
 
     assert len(gallery) == 313
 
+    # Access all @property to ensure that they are not broken
+    assert gallery.url
+    assert gallery.cover_url
+    assert gallery.short_title
+    assert gallery.title_block_tags
+    assert gallery.start_embed
+
 
 async def test_search_nominal_1(http_session: aiohttp.ClientSession):
     search_query = "alp love live english kurosawa"
@@ -110,15 +170,29 @@ async def test_search_nominal_1(http_session: aiohttp.ClientSession):
     assert 388445 in search_result.gallery_ids
     assert num_pages == 1
 
+    # access all @property to ensure that they are not broken
+    assert search_result.short_titles
+    assert search_result.title_blocks
 
-async def test_search_nominal_2(http_session: aiohttp.ClientSession):
-    search_query = "school swimsuit"
 
-    page = await get_search_page(search_query, 1, http_session)
+@pytest.mark.parametrize(
+    "query", ("school swimsuit", "imaizumin", "yuzuki n dash english")
+)
+async def test_search_nominal_additional(
+    http_session: aiohttp.ClientSession, query: str
+):
+    """
+    Based on user cases that resulted in bugs previously
+    """
+    page = await get_search_page(query, 1, http_session)
     num_pages = parse_maximum_search_pages(page)
-    assert num_pages > 1
+    assert num_pages > 0
 
-    parse_search_result_from_page(page)
+    search_result = parse_search_result_from_page(page)
+
+    # access all @property to ensure that they are not broken
+    assert search_result.short_titles
+    assert search_result.title_blocks
 
 
 async def test_search_negative(http_session: aiohttp.ClientSession):
