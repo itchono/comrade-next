@@ -7,7 +7,11 @@ from comrade.lib.nhentai.page_parser import (
     is_valid_gallery_soup,
     is_valid_search_soup,
 )
-from comrade.lib.nhentai.structures import NHentaiWebPage, NoGalleryFoundError
+from comrade.lib.nhentai.structures import (
+    NHentaiSortOrder,
+    NHentaiWebPage,
+    NoGalleryFoundError,
+)
 from comrade.lib.nhentai.urls import ORDERED_PROXIES
 
 
@@ -57,6 +61,7 @@ async def get_search_page(
     search_query: str,
     pagenum: int,
     http_session: aiohttp.ClientSession,
+    sort_order: NHentaiSortOrder = NHentaiSortOrder.RECENT,
 ) -> NHentaiWebPage:
     """
     Gets the HTML content of the NHentai search page, given
@@ -71,6 +76,8 @@ async def get_search_page(
         The page number to use for the search page.
     http_session : aiohttp.ClientSession
         The aiohttp ClientSession to use for the request.
+    sort_order : NHentaiSortOrder
+        The sort order to use for the search page, default recent
 
     Returns
     -------
@@ -96,7 +103,11 @@ async def get_search_page(
 
         # Construct the URL to the gallery
         # e.g. nhentai.net/search/?q=alp+love+live
-        req_url = f"{proxy_url_base}/search/?q={encoded_search_query}{ampersand}page={pagenum}"
+        req_url = (
+            f"{proxy_url_base}/search/?q={encoded_search_query}"
+            f"{ampersand}page={pagenum}"
+            f"{ampersand}{sort_order.value}"
+        )
 
         async with http_session.get(req_url) as response:
             html = await response.text()

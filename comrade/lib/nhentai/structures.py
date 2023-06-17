@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import StrEnum
 from functools import cached_property
 from typing import NamedTuple
 
@@ -197,3 +198,18 @@ class NoGalleryFoundError(Exception):
 
 class NoSearchResultsError(Exception):
     pass
+
+
+class NHentaiSortOrder(StrEnum):
+    RECENT = ""
+    POPULAR_TODAY = "&sort=popular-today"
+    POPULAR_WEEK = "&sort=popular-week"
+    POPULAR_ALL_TIME = "&sort=popular"
+
+    @property
+    def pretty_name(self) -> str:
+        return self.name.replace("_", " ").title()
+
+    @classmethod
+    async def convert(cls, ctx, argument: str):
+        return cls(argument)
