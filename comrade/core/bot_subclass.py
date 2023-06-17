@@ -8,7 +8,7 @@ from pymongo import MongoClient
 from pymongo.database import Database
 
 from comrade._version import __version__
-from comrade.core.configuration import DEBUG_SCOPE, MONGODB_URI, TIMEZONE
+from comrade.core.configuration import MONGODB_URI, TEST_GUILD_ID, TIMEZONE
 from comrade.core.const import CLIENT_INIT_KWARGS
 from comrade.lib.discord_utils import messageable_from_context_id
 
@@ -35,13 +35,10 @@ class Comrade(Client):
     http_session: ClientSession
 
     def __init__(self, *args, **kwargs):
-        if (debug_scope := DEBUG_SCOPE) == 0:
-            debug_scope = MISSING
-
         # Init Interactions.py Bot class
         super().__init__(
             *args,
-            debug_scope=debug_scope,
+            debug_scope=TEST_GUILD_ID,
             activity=Activity.create(
                 name="the proletariat", type=ActivityType.WATCHING
             ),
