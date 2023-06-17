@@ -1,7 +1,7 @@
 from collections import UserDict
 from typing import TypeVar
 
-from interactions import BaseContext, Snowflake
+from interactions import BaseContext, Client, GuildText, Snowflake, User
 
 # Type variable for values in ContextDict
 _VT = TypeVar("_VT")
@@ -43,3 +43,40 @@ class ContextDict(UserDict[BaseContext, _VT]):
 
     def __getitem__(self, key: BaseContext) -> _VT:
         return super().__getitem__(context_id(key))
+
+
+async def messageable_from_context_id(
+    context_id: Snowflake, bot: Client
+) -> GuildText | User:
+    """
+    Performs the "reverse" of context_id(),
+    gives the Guild Text channel or User from which
+    the context_id was generated.
+
+    Parameters
+    ----------
+    context_id : Snowflake
+        The context ID to get the messageable from.
+    bot : Client
+        The bot instance to use to get the messageable.
+
+    Returns
+    -------
+    GuildText | User
+        The messageable from which the context ID was generated.
+
+    Raises
+    ------
+    ValueError
+        If the context ID does not correspond to a valid
+        Guild Text channel or User.
+    """
+    if channel := bot.get_channel(context_id):
+        return channel
+    elif user := bot.get_user(context_id):
+        return user
+
+    raise ValueError(
+        f"Context ID `{context_id}` does not correspond"
+        " to a valid Guild Text channel or User."
+    )

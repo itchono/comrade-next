@@ -10,6 +10,7 @@ from pymongo.database import Database
 from comrade._version import __version__
 from comrade.core.configuration import DEBUG_SCOPE, MONGODB_URI, TIMEZONE
 from comrade.core.const import CLIENT_INIT_KWARGS
+from comrade.lib.discord_utils import messageable_from_context_id
 
 
 class Comrade(Client):
@@ -77,15 +78,14 @@ class Comrade(Client):
                 f"Notifying on restart: Channel/User with ID {self.notify_on_restart}"
             )
 
-            restart_msg = (
-                f"Bot has restarted, current version is {__version__}."
-            )
-
-            if channel := self.get_channel(self.notify_on_restart):
-                await channel.send(restart_msg)
-            elif user := self.get_user(self.notify_on_restart):
-                await user.send(restart_msg)
-            else:
+            try:
+                restart_msgable = await messageable_from_context_id(
+                    self.notify_on_restart, self
+                )
+                await restart_msgable.send(
+                    f"Bot has restarted, current version is {__version__}."
+                )
+            except ValueError:
                 self.logger.warning(
                     f"Could not find channel or user with ID {self.notify_on_restart}"
                 )
