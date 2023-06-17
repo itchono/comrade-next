@@ -1,8 +1,12 @@
+import pytest
 from interactions import GuildText, InteractionCommand
 
 from comrade.core.bot_subclass import Comrade
-from comrade.core.configuration import TEST_GUILD_ID
+from comrade.core.configuration import TEST_GUILD_ID, TEST_MODE
 from comrade.lib.discord_utils import generate_dummy_context
+
+if not TEST_MODE:
+    pytest.skip("Skipping online tests", allow_module_level=True)
 
 
 async def test_gallery_start(bot: Comrade, channel: GuildText):

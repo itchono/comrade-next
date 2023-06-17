@@ -10,10 +10,7 @@ from interactions import Client, Guild, GuildText
 from interactions.ext import prefixed_commands
 
 from comrade.core.bot_subclass import Comrade
-from comrade.core.configuration import BOT_TOKEN, TEST_GUILD_ID, TEST_MODE
-
-if not TEST_MODE:
-    pytest.skip("Skipping online tests", allow_module_level=True)
+from comrade.core.configuration import BOT_TOKEN, TEST_GUILD_ID
 
 
 @pytest.fixture(scope="session")
