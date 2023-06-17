@@ -8,6 +8,13 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  COMRADE_BOT_TOKEN: ${{ secrets.COMRADE_BOT_TOKEN }}
+  COMRADE_MONGODB_URI: ${{ secrets.COMRADE_MONGODB_URI }}
+  COMRADE_TEST_GUILD_ID: ${{ secrets.COMRADE_TEST_GUILD_ID }}
+  COMRADE_TEST_MODE: True
+  COMRADE_TIMEZONE: US/Eastern
+
 jobs:
   build:
     name: Automated Test Suite
