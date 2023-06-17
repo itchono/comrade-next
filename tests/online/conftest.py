@@ -28,14 +28,13 @@ async def bot() -> Comrade:
         bot.load_extension(f"comrade.modules.{module.stem}")
 
     await bot.login(BOT_TOKEN)
-    gw = asyncio.create_task(bot.start_gateway())
+    asyncio.create_task(bot.start_gateway())
 
     await bot._ready.wait()
 
     yield bot
-    gw.cancel()
-    with suppress(asyncio.CancelledError):
-        await gw
+    # Teardown
+    await bot.stop()
 
 
 @pytest.fixture(scope="session")
@@ -49,4 +48,5 @@ async def channel(bot: Client, guild: Guild) -> GuildText:
     channel = await guild.create_text_channel("auto-testing")
     # TODO: configure channel options like nsfw
     yield channel
+    # Teardown
     await channel.delete()
