@@ -11,6 +11,7 @@ from interactions import (
     File,
     Message,
     OptionType,
+    SlashCommandChoice,
     SlashContext,
     StringSelectMenu,
     StringSelectOption,
@@ -34,6 +35,7 @@ from comrade.lib.nhentai.search import get_gallery_page, get_search_page
 from comrade.lib.nhentai.structures import (
     NHentaiGallerySession,
     NHentaiSearchSession,
+    NHentaiSortOrder,
 )
 from comrade.lib.text_utils import text_safe_length
 
@@ -129,7 +131,22 @@ class NHentai(Extension):
         required=True,
         opt_type=OptionType.STRING,
     )
-    async def nhentai_search(self, ctx: SlashContext, query: str):
+    @slash_option(
+        name="sort_order",
+        description="The sort order of the search results (default: Popular All Time)",
+        required=False,
+        opt_type=OptionType.STRING,
+        choices=[
+            SlashCommandChoice(name=e.pretty_name, value=e.value)
+            for e in NHentaiSortOrder
+        ],
+    )
+    async def nhentai_search(
+        self,
+        ctx: SlashContext,
+        query: str,
+        sort_order: NHentaiSortOrder = NHentaiSortOrder.POPULAR_ALL_TIME,
+    ):
         page = await get_search_page(query, 1, self.bot.http_session)
 
         if not has_search_results_soup(page.soup):
@@ -180,7 +197,7 @@ class NHentai(Extension):
 
         # Check if there are more pages
         if not session.advance_page():
-            await ctx.send("No more results found.")
+            await ctx.send("You have reached the end of this work.")
             del self.gallery_sessions[ctx]
             return
 
