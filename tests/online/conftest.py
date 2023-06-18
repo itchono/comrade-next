@@ -11,6 +11,7 @@ from interactions.ext import prefixed_commands
 
 from comrade.core.bot_subclass import Comrade
 from comrade.core.configuration import BOT_TOKEN, TEST_GUILD_ID
+from comrade.lib.discord_utils import generate_dummy_context
 
 
 @pytest.fixture(scope="session")
@@ -44,9 +45,16 @@ async def guild(bot: Client) -> Guild:
 
 
 @pytest.fixture(scope="session")
-async def channel(bot: Client, guild: Guild) -> GuildText:
+async def channel(guild: Guild) -> GuildText:
     channel = await guild.create_text_channel("auto-testing")
     # TODO: configure channel options like nsfw
     yield channel
     # Teardown
     await channel.delete()
+
+
+@pytest.fixture(scope="function")
+async def ctx(
+    bot: Client, channel: GuildText
+) -> prefixed_commands.PrefixedContext:
+    return generate_dummy_context(channel_id=channel.id, client=bot)
