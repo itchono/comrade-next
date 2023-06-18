@@ -1,17 +1,37 @@
+import asyncio
 import logging
 from argparse import ArgumentParser
 from pathlib import Path
 
 from interactions import logger_name
-from interactions.client.const import CLIENT_FEATURE_FLAGS
 from interactions.ext import prefixed_commands
 
 from comrade.core.bot_subclass import Comrade
-from comrade.core.configuration import ACCENT_COLOUR, BOT_TOKEN, DEBUG
+from comrade.core.configuration import ACCENT_COLOUR, BOT_TOKEN, DEV_MODE
 from comrade.core.init_logging import init_logging
 
 
-def main(token: str = None):
+def main(args: list[str] = None, test_mode: bool = False) -> Comrade:
+    """
+    Starts the bot and returns it.
+
+    Parameters
+    ----------
+    args : list[str], optional
+        The command line arguments to parse. If not provided, the arguments
+        will be read from sys.argv.
+
+    test_mode: bool, optional
+        Whether to run the bot in test mode. If True, the bot will not
+        try to initialize a new asyncio event loop.
+
+    Returns
+    -------
+    Comrade
+        The bot instance.
+
+    """
+
     # Parse command line arguments
     parser = ArgumentParser(description="Comrade Bot")
     parser.add_argument(
@@ -20,10 +40,7 @@ def main(token: str = None):
         help="Send a message to the channel with this ID after startup",
         default=0,
     )
-    args = parser.parse_args()
-
-    if token is None:
-        token = BOT_TOKEN
+    args = parser.parse_args(args)
 
     init_logging(
         logger_name,
@@ -32,9 +49,6 @@ def main(token: str = None):
     )
 
     bot = Comrade(notify_on_restart=args.notify_channel)
-
-    # Temp workaround for discord API image upload bug
-    CLIENT_FEATURE_FLAGS["FOLLOWUP_INTERACTIONS_FOR_IMAGES"] = True
 
     prefixed_commands.setup(bot)
     # Load all extensions in the comrade/modules directory
@@ -49,11 +63,16 @@ def main(token: str = None):
     )
     help_cmd.register()
 
-    if DEBUG:
+    if DEV_MODE:
         bot.load_extension("interactions.ext.jurigged")
-        bot.load_extension("interactions.ext.debug_extension")
+        bot.logger.warning("Running in dev mode.")
 
-    bot.start(token=token)
+    if test_mode:
+        asyncio.create_task(bot.login(token=BOT_TOKEN))
+        asyncio.create_task(bot.start_gateway())
+    else:
+        bot.start(token=BOT_TOKEN)
+    return bot
 
 
 if __name__ == "__main__":

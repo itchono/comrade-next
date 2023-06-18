@@ -12,7 +12,6 @@ env:
   COMRADE_BOT_TOKEN: ${{ secrets.COMRADE_BOT_TOKEN }}
   COMRADE_MONGODB_URI: ${{ secrets.COMRADE_MONGODB_URI }}
   COMRADE_TEST_GUILD_ID: ${{ secrets.COMRADE_TEST_GUILD_ID }}
-  COMRADE_TEST_MODE: True
   COMRADE_TIMEZONE: US/Eastern
 
 jobs:
@@ -33,7 +32,7 @@ jobs:
         python -m pip install -e .[test]
     - name: Test with pytest
       run: |
-        pytest --cov=comrade --cov-report=xml
+        pytest --cov=comrade --cov-report=xml --include-online
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:

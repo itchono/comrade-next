@@ -6,7 +6,7 @@ from interactions.client.const import __version__ as __interactions_version__
 
 from comrade._version import __version__ as __comrade_version__
 from comrade.core.bot_subclass import Comrade
-from comrade.core.configuration import ACCENT_COLOUR, DEBUG
+from comrade.core.configuration import ACCENT_COLOUR, DEV_MODE
 from comrade.core.updater import get_current_branch
 
 
