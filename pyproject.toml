@@ -30,7 +30,8 @@ comrade = "comrade.bot:main"
 [project.optional-dependencies]
 test = [
     "pytest >= 7.3",
-    "pytest-asyncio >= 0.21"
+    "pytest-asyncio >= 0.21",
+    "pytest-cov >= 4.1"
 ]
 
 [tool.setuptools_scm]

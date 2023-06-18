@@ -51,6 +51,7 @@ def main(token: str = None):
 
     if DEBUG:
         bot.load_extension("interactions.ext.jurigged")
+        bot.load_extension("interactions.ext.debug_extension")
 
     bot.start(token=token)
 
