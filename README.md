@@ -1,5 +1,6 @@
 # Comrade NEXT
 [![Test Python package](https://github.com/itchono/comrade-next/actions/workflows/ci-pytest.yml/badge.svg)](https://github.com/itchono/comrade-next/actions/workflows/ci-pytest.yml)
+[![codecov](https://codecov.io/gh/itchono/comrade-next/branch/main/graph/badge.svg?token=3DW5YRS91J)](https://codecov.io/gh/itchono/comrade-next)
 
 ![comrade-next-logo](https://user-images.githubusercontent.com/54449457/239707605-5ffae413-a8e7-4f3d-84b9-6100f053b61b.png)
 

@@ -1,15 +1,10 @@
-import pytest
 from interactions import BaseContext, InteractionCommand
 
-from comrade.core.bot_subclass import Comrade
-from comrade.core.configuration import TEST_GUILD_ID, TEST_MODE
-
-if not TEST_MODE:
-    pytest.skip("Skipping online tests", allow_module_level=True)
+from comrade.core.configuration import TEST_GUILD_ID
 
 
-async def test_gallery_start(bot: Comrade, ctx: BaseContext):
-    nhentai_gallery_cmd: InteractionCommand = bot.interactions_by_scope[
+async def test_gallery_start(ctx: BaseContext):
+    nhentai_gallery_cmd: InteractionCommand = ctx.bot.interactions_by_scope[
         TEST_GUILD_ID
     ]["nhentai gallery"]
 

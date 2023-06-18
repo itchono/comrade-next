@@ -30,6 +30,28 @@ from comrade.lib.reminders import Reminder
 class Reminders(Extension):
     bot: Comrade
 
+    def clean_up_reminder(self, reminder: Reminder):
+        """
+        Clean up a reminder after it has been sent.
+        Deletes the reminder from the database.
+        """
+        deletion_result = self.bot.db.remindersV7.delete_one(
+            {"_id": reminder._id}
+        )
+
+        if not deletion_result.acknowledged:
+            self.bot.logger.error(
+                f"Failed to delete reminder {reminder._id} from MongoDB."
+            )
+        elif deletion_result.deleted_count == 0:
+            self.bot.logger.error(
+                f"Failed to delete reminder {reminder._id} from MongoDB: reminder not found."
+            )
+        else:
+            self.bot.logger.info(
+                f"Successfully deleted reminder {reminder._id} from MongoDB."
+            )
+
     async def task_from_reminder(self, reminder: Reminder) -> Task:
         """
         Generates a task from a reminder,
@@ -69,6 +91,15 @@ class Reminders(Extension):
             else:
                 author = await self.bot.fetch_user(reminder.author_id)
 
+            if author is None:
+                # e.g. author is no longer in the guild
+                self.bot.logger.error(
+                    f"Failed to send reminder {reminder._id}: "
+                    f"could not find author with ID {reminder.author_id}."
+                )
+                self.clean_up_reminder(reminder)
+                return
+
             embed = Embed(
                 color=ACCENT_COLOUR,
                 description=reminder.note,
@@ -89,25 +120,8 @@ class Reminders(Extension):
             await sendable.send(
                 content=content, embed=embed, reply_to=reminder.reply_id
             )
-
             self.bot.logger.info(f"Sent reminder {reminder._id}.")
-
-            deletion_result = self.bot.db.remindersV7.delete_one(
-                {"_id": reminder._id}
-            )
-
-            if not deletion_result.acknowledged:
-                self.bot.logger.error(
-                    f"Failed to delete reminder {reminder._id} from MongoDB."
-                )
-            elif deletion_result.deleted_count == 0:
-                self.bot.logger.error(
-                    f"Failed to delete reminder {reminder._id} from MongoDB: reminder not found."
-                )
-            else:
-                self.bot.logger.info(
-                    f"Successfully deleted reminder {reminder._id} from MongoDB."
-                )
+            self.clean_up_reminder(reminder)
 
         return send_reminder
 

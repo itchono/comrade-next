@@ -1,39 +1,24 @@
 # Fixtures for online tests
-# Taken from https://github.com/interactions-py/interactions.py/blob/stable/tests/test_bot.py
-
-import asyncio
-from contextlib import suppress
-from pathlib import Path
+# Modelled off of interactions.py's test fixtures
 
 import pytest
 from interactions import Client, Guild, GuildText
 from interactions.ext import prefixed_commands
 
+from comrade.bot import main
 from comrade.core.bot_subclass import Comrade
-from comrade.core.configuration import BOT_TOKEN, TEST_GUILD_ID
+from comrade.core.configuration import TEST_GUILD_ID
 from comrade.lib.discord_utils import generate_dummy_context
 
 
 @pytest.fixture(scope="session")
 async def bot() -> Comrade:
-    bot = Comrade()
-
-    prefixed_commands.setup(bot)
-    # Load all extensions in the comrade/modules directory
-    ext_path = Path(__file__).parent.parent.parent / "comrade" / "modules"
-
-    for module in ext_path.glob("*.py"):
-        # Skip __init__.py
-        if module.stem == "__init__":
-            continue
-        bot.load_extension(f"comrade.modules.{module.stem}")
-
-    await bot.login(BOT_TOKEN)
-    asyncio.create_task(bot.start_gateway())
-
-    await bot._ready.wait()
-
+    # call main() without args
+    bot = main(args=[], test_mode=True)
+    # Wait for the bot to be ready
+    await bot.wait_until_ready()
     yield bot
+
     # Teardown
     await bot.stop()
 
@@ -57,4 +42,24 @@ async def channel(guild: Guild) -> GuildText:
 async def ctx(
     bot: Client, channel: GuildText
 ) -> prefixed_commands.PrefixedContext:
-    return generate_dummy_context(channel_id=channel.id, client=bot)
+    """
+    Generic PrefixedContext fixture,
+    for commands which do not require any special
+    context attributes.
+
+    If you need to test a command which requires
+    e.g. a valid message to reply to, create your own.
+
+    Details
+    -------
+    - Channel ID is set to the channel ID of the channel fixture.
+    - User ID is set to the bot's user ID (i.e. the bot is the author of the message).
+    - Guild ID is set to the test guild ID.
+    - A dummy message ID is generated.
+    """
+    return generate_dummy_context(
+        channel_id=channel.id,
+        client=bot,
+        user_id=bot.user.id,
+        guild_id=TEST_GUILD_ID,
+    )
