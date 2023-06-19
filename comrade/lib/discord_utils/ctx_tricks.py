@@ -44,6 +44,9 @@ class ContextDict(UserDict[BaseContext, _VT]):
     def __getitem__(self, key: BaseContext) -> _VT:
         return super().__getitem__(context_id(key))
 
+    def __delitem__(self, key: BaseContext) -> None:
+        return super().__delitem__(context_id(key))
+
 
 async def messageable_from_context_id(
     context_id: Snowflake, bot: Client
