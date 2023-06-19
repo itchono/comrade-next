@@ -1,14 +1,10 @@
 import re
-from io import BytesIO
 from typing import Awaitable, Callable
 
 from interactions import (
     ActionRow,
-    Button,
-    ButtonStyle,
     ComponentContext,
     Extension,
-    File,
     Message,
     OptionType,
     SlashCommandChoice,
@@ -24,7 +20,7 @@ from interactions.api.events import MessageCreate
 from interactions.ext.prefixed_commands import PrefixedContext
 
 from comrade.core.bot_subclass import Comrade
-from comrade.lib.discord_utils import ContextDict, DynamicPaginator, context_id
+from comrade.lib.discord_utils import DynamicPaginator, context_id
 from comrade.lib.nhentai.page_parser import (
     has_search_results_soup,
     parse_gallery_from_page,
@@ -39,11 +35,11 @@ from comrade.lib.nhentai.structures import (
 )
 from comrade.lib.text_utils import text_safe_length
 
+from .page_handler_mixin import PageHandlerMixin
 
-class NHentai(Extension):
+
+class NHentai(Extension, PageHandlerMixin):
     bot: Comrade
-    gallery_sessions: ContextDict[NHentaiGallerySession] = ContextDict()
-    search_sessions: ContextDict[NHentaiSearchSession] = ContextDict()
 
     async def init_gallery_session(
         self,
@@ -121,6 +117,46 @@ class NHentai(Extension):
     @slash_command(
         name="nhentai",
         description="NHentai viewer",
+        sub_cmd_name="gpage",
+        sub_cmd_description="Skip to a specific page in the gallery",
+        nsfw=True,
+    )
+    @slash_option(
+        name="page",
+        description="The page number to skip to",
+        required=True,
+        opt_type=OptionType.INTEGER,
+        min_value=1,
+    )
+    async def nhentai_gpage(self, ctx: SlashContext, page: int):
+        """
+        Skip to a specific page in the gallery.
+
+        Parameters
+        ----------
+        page: int
+            The page number to skip to
+        """
+        session = self.gallery_sessions.get(ctx)
+
+        if not session:
+            await ctx.send(
+                "You must start a gallery session first using `/nhentai gallery`.",
+                ephemeral=True,
+            )
+            return
+
+        if not session.set_page(page):
+            await ctx.send(
+                f"Invalid page number. Must be between 1 and {len(session.gallery)}."
+            )
+            return
+
+        await self.send_current_gallery_page(ctx, session)
+
+    @slash_command(
+        name="nhentai",
+        description="NHentai viewer",
         sub_cmd_name="search",
         sub_cmd_description="Search for an NHentai gallery using tags",
         nsfw=True,
@@ -147,7 +183,9 @@ class NHentai(Extension):
         query: str,
         sort_order: NHentaiSortOrder = NHentaiSortOrder.POPULAR_ALL_TIME,
     ):
-        page = await get_search_page(query, 1, self.bot.http_session)
+        page = await get_search_page(
+            query, 1, self.bot.http_session, sort_order
+        )
 
         if not has_search_results_soup(page.soup):
             return await ctx.send(f"No results found for query `{query}`.")
@@ -175,39 +213,6 @@ class NHentai(Extension):
 
         await paginator.send(ctx)
 
-    async def handle_nhentai_next_page(
-        self,
-        ctx: PrefixedContext | ComponentContext,
-        session: NHentaiGallerySession,
-    ):
-        """
-        Handles the "np" command for nhentai galleries.
-
-        Sends the next image in the gallery,
-        and disables the button on the previous message.
-
-        Parameters
-        ----------
-        ctx: PrefixedContext | ComponentContext
-            The context object, originating either from a button or channel message
-        session: NHentaiGallerySession
-            The gallery session
-
-        """
-
-        # Check if there are more pages
-        if not session.advance_page():
-            await ctx.send("You have reached the end of this work.")
-            del self.gallery_sessions[ctx]
-            return
-
-        # Request and send the image
-        async with self.bot.http_session.get(session.current_page_url) as resp:
-            img_bytes = BytesIO(await resp.read())
-        img_file = File(img_bytes, file_name=session.current_page_filename)
-
-        await ctx.send(file=img_file, components=[self.next_page_button])
-
     @component_callback(re.compile(r"nhentai_search_(\d+)"))
     async def nhentai_search_callback(self, ctx: ComponentContext):
         """
@@ -220,24 +225,11 @@ class NHentai(Extension):
         # Initialize the session
         await self.init_gallery_session(ctx, gallery_id)
 
-    @property
-    def next_page_button(self, disabled: bool = False):
-        """
-        Button used to advance pages in an nhentai gallery.
-        """
-        return Button(
-            style=ButtonStyle.PRIMARY,
-            label="Next Page",
-            custom_id="nhentai_np",
-            disabled=disabled,
-        )
-
     @component_callback("nhentai_np")
     async def nhentai_np_callback(self, ctx: ComponentContext):
         try:
             # Locate the session
-            nh_gallery_session = self.gallery_sessions[ctx]
-            await self.handle_nhentai_next_page(ctx, nh_gallery_session)
+            await self.handle_nhentai_next_page(ctx, self.gallery_sessions[ctx])
 
         except KeyError:
             # No session active
@@ -246,6 +238,7 @@ class NHentai(Extension):
                 " and its session has expired. Please start a new NHentai session.",
                 ephemeral=True,
             )
+            return
 
     @listen("message_create")
     async def nhentai_listener(self, message_event: MessageCreate):
@@ -344,7 +337,3 @@ class NHentai(Extension):
             )
 
         return get_components_and_content
-
-
-def setup(bot):
-    NHentai(bot)

@@ -52,9 +52,9 @@ def main(args: list[str] = None, test_mode: bool = False) -> Comrade:
 
     prefixed_commands.setup(bot)
     # Load all extensions in the comrade/modules directory
-    for module in Path(__file__).parent.glob("modules/*.py"):
-        # Skip __init__.py
-        if module.stem == "__init__":
+    for module in Path(__file__).parent.glob("modules/*"):
+        # Skip all dunder files
+        if module.stem.startswith("__"):
             continue
         bot.load_extension(f"comrade.modules.{module.stem}")
 
