@@ -1,6 +1,6 @@
 # This workflow will install Python dependencies, and run tests
 
-name: Automated Unit and Integration Tests
+name: Automated Tests
 
 on:
   push:
@@ -23,9 +23,10 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.11
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: "3.11"
+        cache: 'pip' # caching pip dependencies
     - name: Install bot as package
       run: |
         python -m pip install --upgrade pip
