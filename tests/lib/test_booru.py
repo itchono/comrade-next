@@ -1,6 +1,7 @@
 import asyncio
 
 import booru
+import pytest
 
 from comrade.lib.booru_lib import BOORUS, BooruSession
 
@@ -10,6 +11,7 @@ def test_booru_dict():
     assert BOORUS["gelbooru"] == booru.Gelbooru
 
 
+@pytest.mark.online
 def test_booru_session():
     """
     Integrated test; requests a post from gelbooru,

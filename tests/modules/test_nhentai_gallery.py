@@ -1,8 +1,10 @@
+import pytest
 from interactions import BaseContext, InteractionCommand
 
 from comrade.core.configuration import TEST_GUILD_ID
 
 
+@pytest.mark.bot
 async def test_gallery_start(ctx: BaseContext):
     nhentai_gallery_cmd: InteractionCommand = ctx.bot.interactions_by_scope[
         TEST_GUILD_ID

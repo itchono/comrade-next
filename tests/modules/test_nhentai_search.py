@@ -1,9 +1,11 @@
+import pytest
 from interactions import BaseContext, ComponentType, InteractionCommand
 from interactions.api.events import MessageCreate
 
 from comrade.core.configuration import TEST_GUILD_ID
 
 
+@pytest.mark.bot
 async def test_search_start(ctx: BaseContext):
     nhentai_search_cmd: InteractionCommand = ctx.bot.interactions_by_scope[
         TEST_GUILD_ID

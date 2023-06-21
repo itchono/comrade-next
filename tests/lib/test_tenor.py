@@ -4,6 +4,7 @@ import pytest
 from comrade.lib.tenor import tenor_link_to_gif
 
 
+@pytest.mark.online
 @pytest.mark.parametrize(
     ("picker_link, expected_link"),
     [

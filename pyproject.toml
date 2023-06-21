@@ -46,3 +46,6 @@ line-length = 80
 [tool.pytest.ini_options]
 filterwarnings = ["ignore::DeprecationWarning"]
 asyncio_mode = "auto"
+markers = ["bot: marks tests as requiring a bot token",
+           "online: marks tests as requiring an internet connection"]
+
