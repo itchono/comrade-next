@@ -1,5 +1,3 @@
-from urllib.parse import unquote
-
 from interactions import (
     AutocompleteContext,
     Button,
@@ -17,13 +15,19 @@ from interactions import (
 )
 from interactions.api.events import MessageCreate
 from interactions.ext.prefixed_commands import PrefixedContext
-from orjson import loads
 
-from comrade.lib.booru_lib import BOORUS, BooruSession
+from comrade.core.bot_subclass import Comrade
+from comrade.lib.booru_ext import (
+    BOORUS,
+    BooruSession,
+    autocomplete_query,
+    init_monkey_patches,
+)
 from comrade.lib.discord_utils import ContextDict
 
 
 class Booru(Extension):
+    bot: Comrade
     booru_sessions: ContextDict[BooruSession] = ContextDict()
 
     @slash_command(description="Gets a random image from a booru", nsfw=True)
@@ -100,18 +104,9 @@ class Booru(Extension):
         elif not query:
             return await ctx.send(["(Start typing to get tag suggestions)"])
 
-        most_recent_tag = (query.split()[-1]).strip()
-        the_rest = query.split()[:-1]
-        tags = loads(await booru_obj.find_tags(most_recent_tag))
+        query_autocompletes = await autocomplete_query(query, booru_obj)
 
-        if not tags:
-            return await ctx.send([" ".join(the_rest + [most_recent_tag])])
-
-        to_send = [
-            f"{' '.join(the_rest + [unquote(tag)])}" for tag in tags[:10]
-        ]
-
-        await ctx.send(to_send)
+        await ctx.send(query_autocompletes)
 
     async def handle_booru_next(
         self, ctx: PrefixedContext | ComponentContext, session: BooruSession
@@ -157,6 +152,20 @@ class Booru(Extension):
                     await self.handle_booru_next(ctx, booru_session)
                 except KeyError:
                     pass
+
+    @listen("on_ready")
+    async def booru_ready(self):
+        try:
+            await init_monkey_patches(self.bot.http_session)
+
+            self.bot.logger.info(
+                "Booru extension ready, monkey patches applied."
+            )
+
+        except Exception as e:
+            self.bot.logger.error(
+                "Error while applying monkey patches to booru: %s", e
+            )
 
     @component_callback("booru_next")
     async def booru_next_callback(self, ctx: ComponentContext):
