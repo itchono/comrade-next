@@ -5,6 +5,7 @@ from interactions import BaseContext
 from interactions.api.events import MessageCreate
 
 
+@pytest.mark.bot
 @pytest.mark.parametrize("emote", ("pssh", "PSSH"))
 async def test_sending_emote(ctx: BaseContext, emote: str):
     """
@@ -30,6 +31,7 @@ async def test_sending_emote(ctx: BaseContext, emote: str):
     await asyncio.sleep(1)  # cool down to help with detecting events properly
 
 
+@pytest.mark.bot
 async def test_no_emote(ctx: BaseContext):
     await ctx.send(":pssh2doesnotexist:")
 

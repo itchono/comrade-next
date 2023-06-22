@@ -66,6 +66,7 @@ def test_title_parser_difficult_cases(full_title, expected_title):
     assert filter_title_text(full_title) == expected_title
 
 
+@pytest.mark.online
 async def test_gallery_acquisition_nominal(
     http_session: aiohttp.ClientSession,
 ):
@@ -103,19 +104,7 @@ async def test_gallery_acquisition_nominal(
     assert gallery.start_embed
 
 
-async def length_1_gallery(http_session: aiohttp.ClientSession):
-    """
-    TODO: use this for integration tests in the future,
-    it's a good test case for getting the end of a gallery
-    """
-    gallery_id = 266745
-
-    page = await get_gallery_page(gallery_id, http_session)
-    gallery = parse_gallery_from_page(page)
-
-    assert len(gallery) == 1
-
-
+@pytest.mark.online
 async def test_not_present_anywhere(http_session: aiohttp.ClientSession):
     """
     Verify that a gallery that is not present on any mirror raises an exception
@@ -126,6 +115,7 @@ async def test_not_present_anywhere(http_session: aiohttp.ClientSession):
         await get_gallery_page(gallery_id, http_session)
 
 
+@pytest.mark.online
 async def test_gallery_not_on_nhentai_to(http_session: aiohttp.ClientSession):
     gallery_id = 444797
 
@@ -159,6 +149,7 @@ async def test_gallery_not_on_nhentai_to(http_session: aiohttp.ClientSession):
     assert gallery.start_embed
 
 
+@pytest.mark.online
 async def test_search_nominal_1(http_session: aiohttp.ClientSession):
     search_query = "alp love live english kurosawa"
 
@@ -175,6 +166,7 @@ async def test_search_nominal_1(http_session: aiohttp.ClientSession):
     assert search_result.title_blocks
 
 
+@pytest.mark.online
 @pytest.mark.parametrize(
     "query", ("school swimsuit", "imaizumin", "yuzuki n dash english")
 )
@@ -195,6 +187,7 @@ async def test_search_nominal_additional(
     assert search_result.title_blocks
 
 
+@pytest.mark.online
 async def test_search_negative(http_session: aiohttp.ClientSession):
     search_query = "this should not exist"
 

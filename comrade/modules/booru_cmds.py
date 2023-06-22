@@ -1,5 +1,3 @@
-from urllib.parse import unquote
-
 from interactions import (
     AutocompleteContext,
     Button,
@@ -17,13 +15,18 @@ from interactions import (
 )
 from interactions.api.events import MessageCreate
 from interactions.ext.prefixed_commands import PrefixedContext
-from orjson import loads
 
-from comrade.lib.booru_lib import BOORUS, BooruSession
+from comrade.core.bot_subclass import Comrade
+from comrade.lib.booru_ext import (
+    BOORUS,
+    BooruSession,
+    autocomplete_query,
+)
 from comrade.lib.discord_utils import ContextDict
 
 
 class Booru(Extension):
+    bot: Comrade
     booru_sessions: ContextDict[BooruSession] = ContextDict()
 
     @slash_command(description="Gets a random image from a booru", nsfw=True)
@@ -64,7 +67,7 @@ class Booru(Extension):
         tags : str
             The tags to search for.
         """
-        booru_obj = BOORUS[booru_name]()
+        booru_obj = BOORUS[booru_name](self.bot.http_session)
         booru_session = BooruSession(booru_obj, tags, sort_random)
 
         # Try to initialize the posts list
@@ -89,7 +92,7 @@ class Booru(Extension):
         This is done by calling the booru's find_tags method, which returns a
         list of tags that match the user's input.
         """
-        booru_obj = BOORUS[ctx.kwargs["booru_name"]]()
+        booru_obj = BOORUS[ctx.kwargs["booru_name"]](self.bot.http_session)
 
         query: str = ctx.kwargs["tags"]
 
@@ -100,18 +103,9 @@ class Booru(Extension):
         elif not query:
             return await ctx.send(["(Start typing to get tag suggestions)"])
 
-        most_recent_tag = (query.split()[-1]).strip()
-        the_rest = query.split()[:-1]
-        tags = loads(await booru_obj.find_tags(most_recent_tag))
+        query_autocompletes = await autocomplete_query(query, booru_obj)
 
-        if not tags:
-            return await ctx.send([" ".join(the_rest + [most_recent_tag])])
-
-        to_send = [
-            f"{' '.join(the_rest + [unquote(tag)])}" for tag in tags[:10]
-        ]
-
-        await ctx.send(to_send)
+        await ctx.send(query_autocompletes)
 
     async def handle_booru_next(
         self, ctx: PrefixedContext | ComponentContext, session: BooruSession

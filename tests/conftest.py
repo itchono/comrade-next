@@ -1,5 +1,4 @@
 import asyncio
-from pathlib import Path
 
 import aiohttp
 import orjson
@@ -8,15 +7,30 @@ import pytest
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--include-online", action="store_true", help="Include online tests"
+        "--run-bot",
+        action="store_true",
+        help="Run bot integration tests",
+    )
+    parser.addoption(
+        "--run-online",
+        action="store_true",
+        help="Run tests requiring internet",
     )
 
 
-def pytest_ignore_collect(path: Path, config):
-    # Ignore online tests if "--include-online" is not passed
-    if not config.getoption("--include-online"):
-        if path == Path(__file__).parent / "online":
-            return True
+def pytest_collection_modifyitems(config, items):
+    # Skip certain tests if the user doesn't specify the option
+    if not config.getoption("--run-bot"):
+        skip_bot = pytest.mark.skip(reason="need --run-bot option to run")
+        for item in items:
+            if "bot" in item.keywords:
+                item.add_marker(skip_bot)
+
+    if not config.getoption("--run-online"):
+        skip_online = pytest.mark.skip(reason="need --run-online option to run")
+        for item in items:
+            if "online" in item.keywords:
+                item.add_marker(skip_online)
 
 
 # reusable aiohttp client fixture

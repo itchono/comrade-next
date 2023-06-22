@@ -1,19 +1,20 @@
 from dataclasses import dataclass
-from html import unescape
 from typing import Type
 
 import booru
 from interactions import Embed
 from orjson import loads
 
+from comrade.lib.booru_ext.const import OPTIONAL_EMBED_FIELDS
+from comrade.lib.booru_ext.filters import clean_up_post_tag
 from comrade.lib.text_utils import escape_md, text_safe_length
 
 # Create a type alias that can be any of the booru classes
 BooruType = (
-    booru.Danbooru
-    | booru.Gelbooru
+    booru.Gelbooru
     | booru.Rule34
     | booru.Safebooru
+    | booru.Danbooru
     | booru.Xbooru
 )
 # Execute some wizardry using type hints to get a dict of booru names to booru classes
@@ -96,6 +97,22 @@ class BooruSession:
         return True
 
     @property
+    def post_tags(self) -> str:
+        """
+        The tags of the current post.
+
+        For Danbooru, make sure to index "tag_string" instead of "tags".
+        """
+        try:
+            return ", ".join(
+                map(clean_up_post_tag, self._posts[self.post_id]["tags"])
+            )
+        except KeyError:
+            return ", ".join(
+                map(clean_up_post_tag, self._posts[self.post_id]["tag_string"])
+            )
+
+    @property
     def formatted_embed(self) -> Embed:
         """
         Create an Embed from a booru post's data.
@@ -107,38 +124,29 @@ class BooruSession:
         """
         post_data = self._posts[self.post_id]
 
-        file_url = post_data["file_url"]
-        img_tag_list = ", ".join(
-            map(escape_md, map(unescape, post_data["tags"]))
-        )
-
         footer_text = (
             f"Site: {self.booru.__class__.__name__} | Page {self.page_id} "
             f"| Post {self.post_id + 1} | Type 'next' to advance"
         )
 
         embed = Embed(title=text_safe_length(escape_md(self.query), 256))
-        embed.set_image(url=file_url)
+        embed.set_image(url=post_data["file_url"])
         embed.set_footer(text=footer_text)
 
         embed.add_field(
             name="Tags",
-            value=text_safe_length(img_tag_list, 1000),
+            value=text_safe_length(self.post_tags, 1000),
             inline=False,
         )
 
         # Try to add additional fields to the embed, depending on the booru
 
-        # Post ID
-        try:
-            embed.add_field(name="Post ID", value=post_data["id"], inline=True)
-        except KeyError:
-            pass
-
-        # Post Score
-        try:
-            embed.add_field(name="Score", value=post_data["score"], inline=True)
-        except KeyError:
-            pass
+        for field_name, field_key in OPTIONAL_EMBED_FIELDS.items():
+            try:
+                embed.add_field(
+                    name=field_name, value=post_data[field_key], inline=True
+                )
+            except KeyError:
+                pass
 
         return embed
