@@ -11,10 +11,10 @@ from comrade.lib.text_utils import escape_md, text_safe_length
 
 # Create a type alias that can be any of the booru classes
 BooruType = (
-    booru.Danbooru
-    | booru.Gelbooru
+    booru.Gelbooru
     | booru.Rule34
     | booru.Safebooru
+    | booru.Danbooru
     | booru.Xbooru
 )
 # Execute some wizardry using type hints to get a dict of booru names to booru classes

@@ -21,7 +21,6 @@ from comrade.lib.booru_ext import (
     BOORUS,
     BooruSession,
     autocomplete_query,
-    init_monkey_patches,
 )
 from comrade.lib.discord_utils import ContextDict
 
@@ -68,7 +67,7 @@ class Booru(Extension):
         tags : str
             The tags to search for.
         """
-        booru_obj = BOORUS[booru_name]()
+        booru_obj = BOORUS[booru_name](self.bot.http_session)
         booru_session = BooruSession(booru_obj, tags, sort_random)
 
         # Try to initialize the posts list
@@ -93,7 +92,7 @@ class Booru(Extension):
         This is done by calling the booru's find_tags method, which returns a
         list of tags that match the user's input.
         """
-        booru_obj = BOORUS[ctx.kwargs["booru_name"]]()
+        booru_obj = BOORUS[ctx.kwargs["booru_name"]](self.bot.http_session)
 
         query: str = ctx.kwargs["tags"]
 
@@ -152,20 +151,6 @@ class Booru(Extension):
                     await self.handle_booru_next(ctx, booru_session)
                 except KeyError:
                     pass
-
-    @listen("on_ready")
-    async def booru_ready(self):
-        try:
-            await init_monkey_patches(self.bot.http_session)
-
-            self.bot.logger.info(
-                "Booru extension ready, monkey patches applied."
-            )
-
-        except Exception as e:
-            self.bot.logger.error(
-                "Error while applying monkey patches to booru: %s", e
-            )
 
     @component_callback("booru_next")
     async def booru_next_callback(self, ctx: ComponentContext):

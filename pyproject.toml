@@ -15,10 +15,10 @@ dependencies = [
     "beautifulsoup4 >= 4",
     "pydub >= 0.25",
     "arrow >= 1.2",
-    "booru >= 1.0",
     "lxml >= 4.9",
     "python-decouple >= 3.8",
     "levenshtein >= 0.21",
+    "booru @ git+https://github.com/itchono/booru-modified"
 ]
 
 [project.urls]
