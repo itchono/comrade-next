@@ -1,25 +1,24 @@
-from zoneinfo import ZoneInfo
-
-import arrow
 import orjson
 from aiohttp import ClientSession
-from interactions import Activity, ActivityType, Client, listen
+from interactions import Activity, ActivityType, listen
 from pymongo import MongoClient
-from pymongo.database import Database
 
 from comrade._version import __version__
+from comrade.core.augmentations import AugmentedClient
 from comrade.core.configuration import (
     MONGODB_URI,
     TEST_GUILD_ID,
-    TIMEZONE,
     WUMBODB_GUILD_ID,
 )
 from comrade.core.const import CLIENT_INIT_KWARGS
+from comrade.core.relay import RelayMixin
 from comrade.lib.discord_utils import messageable_from_context_id
-from comrade.lib.relay import Relay
 
 
-class Comrade(Client):
+class Comrade(
+    AugmentedClient,
+    RelayMixin,
+):
     """
     Modified subclass of Client class to have a few extra features.
 
@@ -34,12 +33,6 @@ class Comrade(Client):
     ---------
     - Turns off on_..._completion listeners from interactions.py
     """
-
-    db: Database
-    relay: Relay = None
-    timezone: str = TIMEZONE
-    notify_on_restart: int = 0  # Channel ID to notify on restart
-    http_session: ClientSession
 
     def __init__(self, *args, **kwargs):
         # Init Interactions.py Bot class
@@ -74,7 +67,7 @@ class Comrade(Client):
     @listen()
     async def on_ready(self):
         # Set up relay guild
-        self.relay = await Relay.from_bot(self, WUMBODB_GUILD_ID)
+        await self.init_relay(WUMBODB_GUILD_ID)
 
         self.logger.info(
             f"Bot is Ready. Logged in as {self.user} ({self.user.id})"
@@ -113,17 +106,3 @@ class Comrade(Client):
     @listen(disable_default_listeners=True)
     async def on_modal_completion(self, *args, **kwargs):
         pass
-
-    @property
-    def start_time(self) -> arrow.Arrow:
-        """
-        The start time of the bot, as an Arrow instance.
-
-        Timezone is set to the bot's timezone.
-        """
-        if not (st := self._connection_state.start_time):
-            return arrow.now(self.timezone)
-
-        # ensure that st is localized to our timezone (because it defaults to whatever
-        # the system timezone is)
-        return arrow.Arrow.fromdatetime(st.astimezone(ZoneInfo(self.timezone)))

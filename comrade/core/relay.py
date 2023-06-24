@@ -18,6 +18,8 @@ from interactions.api.events import MessageCreate
 from interactions.client.utils.serializer import get_file_mimetype
 from pymongo.collection import Collection
 
+from comrade.core.augmentations import AugmentedClient
+
 
 class Relay:
     """
@@ -25,8 +27,9 @@ class Relay:
 
     Communication is performed using the relay channel, which all bots have access to.
 
-    Blobs are stored in the blob-storage channel, which is only accessible to the relay bot.
-    This allows us to upload images and other files to Discord, and then store the URL in MongoDB.
+    Blobs are stored in the blob-storage channel, which is
+    only accessible to the relay bot. This allows us to upload images
+    and other files to Discord, and then store the URL in MongoDB.
 
     """
 
@@ -35,7 +38,8 @@ class Relay:
     blob_storage_collection: Collection
 
     # Cache for channels
-    channel_cache: dict[str, GuildText] = {}
+    blob_storage_channel: GuildText = None
+    relay_channel: GuildText = None
 
     def __init__(
         self,
@@ -55,21 +59,22 @@ class Relay:
 
         guild_channels = await self.guild.fetch_channels()
 
-        for channel in guild_channels:
-            self.channel_cache[channel.name] = channel
+        channel_mapping = {channel.name: channel for channel in guild_channels}
 
-        if "relay" not in self.channel_cache:
-            self.channel_cache["relay"] = await self.guild.create_text_channel(
-                "relay"
-            )
+        try:
+            self.relay_channel = channel_mapping["relay"]
+        except KeyError:
+            self.relay_channel = await self.guild.create_text_channel("relay")
             logger.warning(
                 f"Created relay channel in {self.guild.name}, because it did not exist."
             )
 
-        if "blob-storage" not in self.channel_cache:
-            self.channel_cache[
+        try:
+            self.blob_storage_channel = channel_mapping["blob-storage"]
+        except KeyError:
+            self.blob_storage_channel = await self.guild.create_text_channel(
                 "blob-storage"
-            ] = await self.guild.create_text_channel("blob-storage")
+            )
             logger.warning(
                 f"Created blob-storage channel in {self.guild.name}, because it did not exist."
             )
@@ -77,7 +82,7 @@ class Relay:
         logger.info(f"Relay: all channels initialized in {self.guild.name}")
 
     @classmethod
-    async def from_bot(cls, bot: Client, guild_id: int) -> Relay:
+    async def from_bot(cls, bot: AugmentedClient, guild_id: int) -> Relay:
         """
         Create a Relay instance from a bot instance
 
@@ -106,38 +111,6 @@ class Relay:
         await relay.ensure_channels()
 
         return relay
-
-    @property
-    def blob_storage_channel(self) -> GuildText:
-        try:
-            return self.channel_cache["blob-storage"]
-        except KeyError:
-            guild_channels = self.guild.channels
-            for channel in guild_channels:
-                if channel.name == "blob-storage":
-                    self.channel_cache["blob-storage"] = channel
-                    return channel
-
-        raise RuntimeError(
-            "Could not find blob-storage channel. "
-            "You may want to call .ensure_channels() first."
-        )
-
-    @property
-    def relay_channel(self) -> GuildText:
-        try:
-            return self.channel_cache["relay"]
-        except KeyError:
-            guild_channels = self.guild.channels
-            for channel in guild_channels:
-                if channel.name == "relay":
-                    self.channel_cache["relay"] = channel
-                    return channel
-
-        raise RuntimeError(
-            "Could not find relay channel. "
-            "You may want to call .ensure_channels() first."
-        )
 
     async def upload_blob(
         self,
@@ -178,6 +151,8 @@ class Relay:
         if extension is None:
             extension
 
+        assert self.blob_storage_channel.guild.id == self.guild.id
+
         msg = await self.blob_storage_channel.send(
             file=File(data, file_name=filename + extension)
         )
@@ -196,6 +171,7 @@ class Relay:
         blob_url: str,
         mongodb_collection: Collection = None,
         mongodb_document_data: dict = {},
+        filename: str = "blob",
     ) -> str:
         """
         Mirrors an existing blob from the internet to the
@@ -209,6 +185,8 @@ class Relay:
             The MongoDB collection to sync to, by default the one passed to the constructor
         mongodb_document_data : dict, optional
             Additional fields to store in the MongoDB document, by default {}
+        filename : str, optional
+            The filename to use for the blob (minus extension), by default "blob"
 
         Returns
         -------
@@ -230,13 +208,17 @@ class Relay:
 
         # Upload the blob
         msg = await self.upload_blob(
-            data, mongodb_collection, modified_document_data
+            data, mongodb_collection, modified_document_data, filename
         )
 
         return msg.attachments[0].url
 
     async def get_mirrored_blob(
-        self, blob_url: str, mongodb_collection: Collection = None
+        self,
+        blob_url: str,
+        mongodb_collection: Collection = None,
+        mongodb_document_data: dict = {},
+        filename: str = "blob",
     ) -> str:
         """
         Gets a blob from the blob-storage channel if it exists,
@@ -248,6 +230,11 @@ class Relay:
             The URL of the blob to mirror
         mongodb_collection : Collection, optional
             The MongoDB collection to sync to, by default the one passed to the constructor
+        mongodb_document_data : dict, optional
+            Additional fields to store in the MongoDB document, if the image needs to be uploaded
+            , by default {}
+        filename : str, optional
+            The filename to use for the blob (minus extension), by default "blob"
 
         Returns
         -------
@@ -270,7 +257,12 @@ class Relay:
         if doc:
             return doc["blob_url"]
         else:
-            return await self.mirror_blob(blob_url, mongodb_collection)
+            return await self.mirror_blob(
+                blob_url,
+                mongodb_collection,
+                mongodb_document_data,
+                filename,
+            )
 
     async def send_message(self, message: str) -> Message:
         """
@@ -299,3 +291,19 @@ class Relay:
                 )
 
         bot.add_listener(relay_msg_callback)
+
+
+class RelayMixin:
+    relay: Relay
+
+    async def init_relay(self, guild_id: int):
+        """
+        Initialize the relay system
+
+        Parameters
+        ----------
+        guild_id : int
+            The ID of the guild to use
+
+        """
+        self.relay = await Relay.from_bot(self, guild_id)

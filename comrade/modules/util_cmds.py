@@ -1,7 +1,5 @@
 from interactions import (
-    Embed,
     Extension,
-    File,
     OptionType,
     SlashContext,
     slash_command,
