@@ -3,14 +3,20 @@ from zoneinfo import ZoneInfo
 import arrow
 import orjson
 from aiohttp import ClientSession
-from interactions import MISSING, Activity, ActivityType, Client, listen
+from interactions import Activity, ActivityType, Client, listen
 from pymongo import MongoClient
 from pymongo.database import Database
 
 from comrade._version import __version__
-from comrade.core.configuration import MONGODB_URI, TEST_GUILD_ID, TIMEZONE
+from comrade.core.configuration import (
+    MONGODB_URI,
+    TEST_GUILD_ID,
+    TIMEZONE,
+    WUMBODB_GUILD_ID,
+)
 from comrade.core.const import CLIENT_INIT_KWARGS
 from comrade.lib.discord_utils import messageable_from_context_id
+from comrade.lib.relay import Relay
 
 
 class Comrade(Client):
@@ -30,6 +36,7 @@ class Comrade(Client):
     """
 
     db: Database
+    relay: Relay = None
     timezone: str = TIMEZONE
     notify_on_restart: int = 0  # Channel ID to notify on restart
     http_session: ClientSession
@@ -66,10 +73,14 @@ class Comrade(Client):
 
     @listen()
     async def on_ready(self):
+        # Set up relay guild
+        self.relay = await Relay.from_bot(self, WUMBODB_GUILD_ID)
+
         self.logger.info(
             f"Bot is Ready. Logged in as {self.user} ({self.user.id})"
         )
 
+        # Notify on restart, if enabled
         if self.notify_on_restart:
             self.logger.info(
                 f"Notifying on restart: Channel/User with ID {self.notify_on_restart}"
