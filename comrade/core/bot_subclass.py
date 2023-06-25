@@ -7,8 +7,8 @@ from comrade._version import __version__
 from comrade.core.augmentations import AugmentedClient
 from comrade.core.configuration import (
     MONGODB_URI,
+    RELAY_GUILD_ID,
     TEST_GUILD_ID,
-    WUMBODB_GUILD_ID,
 )
 from comrade.core.const import CLIENT_INIT_KWARGS
 from comrade.core.relay import RelayMixin
@@ -67,7 +67,7 @@ class Comrade(
     @listen()
     async def on_ready(self):
         # Set up relay guild
-        await self.init_relay(WUMBODB_GUILD_ID)
+        await self.init_relay(RELAY_GUILD_ID)
 
         self.logger.info(
             f"Bot is Ready. Logged in as {self.user} ({self.user.id})"
