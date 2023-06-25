@@ -27,16 +27,23 @@ async def test_booru_start_gelbooru(ctx: BaseContext):
         == "Site: Gelbooru | Page 1 | Post 1 | Type 'next' to advance"
     )
 
+    await asyncio.sleep(2)  # Chill a bit to allow messages etc. to be sent
+
     # The post list should be depleted now
     await ctx.send("next")
 
+    def check(m: MessageCreate):
+        return m.message.author == ctx.bot.user and m.message.content != "next"
+
     msg_event: MessageCreate = await ctx.bot.wait_for(
         "message_create",
-        checks=lambda m: m.message.author == ctx.bot.user,
+        checks=check,
         timeout=5,
     )
 
     assert msg_event.message.content == "No more results found."
+
+    await asyncio.sleep(2)  # Chill a bit to allow messages etc. to be sent
 
     # This should return no response, because the session is over
     await ctx.send("next")
@@ -44,6 +51,6 @@ async def test_booru_start_gelbooru(ctx: BaseContext):
     with pytest.raises(asyncio.TimeoutError):
         await ctx.bot.wait_for(
             "message_create",
-            checks=lambda m: m.message.author == ctx.bot.user,
+            checks=check,
             timeout=1,
         )

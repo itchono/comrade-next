@@ -29,7 +29,7 @@ async def test_reminder_from_slash(ctx: BaseContext):
     )
 
     def check(m: MessageCreate):
-        return m.message._author_id == ctx.bot.user.id
+        return m.message._author_id == ctx.bot.user.id and m.message.embeds
 
     # Wait for bot to send reminder message
     reminder_msg_event: MessageCreate = await ctx.bot.wait_for(

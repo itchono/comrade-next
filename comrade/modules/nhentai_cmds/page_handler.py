@@ -1,18 +1,24 @@
-from interactions import Button, ButtonStyle, ComponentContext
+from collections import deque
+
+import arrow
+from interactions import (
+    Button,
+    ButtonStyle,
+    ComponentContext,
+    component_callback,
+)
 from interactions.ext.prefixed_commands import PrefixedContext
 
-from comrade.core.bot_subclass import Comrade
-from comrade.lib.discord_utils import ContextDict
 from comrade.lib.nhentai.structures import (
     NHentaiGallerySession,
-    NHentaiSearchSession,
 )
 
+from .gallery_init import NHGalleryInit
 
-class PageHandlerMixin:
-    bot: Comrade
-    gallery_sessions: ContextDict[NHentaiGallerySession] = ContextDict()
-    search_sessions: ContextDict[NHentaiSearchSession] = ContextDict()
+
+class NHPageHandler(NHGalleryInit):
+    # store the last 100 page response times
+    page_response_times = deque(maxlen=100)
 
     async def send_current_gallery_page(
         self,
@@ -30,14 +36,29 @@ class PageHandlerMixin:
             The gallery session
 
         """
+        # Metrics
+        start_time = arrow.utcnow()
 
-        # Mirror the image to the bot's blob storage
-        blob_url = await self.bot.relay.get_mirrored_blob(
-            session.current_page_url,
-            filename=session.current_page_filename.split(".")[0],
-        )
+        # Cache
+        blob_url = await self.bot.relay.find_blob_url(session.current_page_url)
+        if blob_url is None:
+            doc = await self.bot.relay.create_blob_from_url(
+                session.current_page_url,
+                filename=session.current_page_filename,
+            )
+            blob_url = doc["blob_url"]
 
-        await ctx.send(content=blob_url, components=[self.next_page_button])
+        embed = session.current_page_embed
+        embed.set_image(url=blob_url)
+
+        await ctx.send(embed=embed, components=[self.next_page_button])
+
+        # Metrics
+        end_time = arrow.utcnow()
+        self.page_response_times.append((end_time - start_time).total_seconds())
+
+        # pre-emptively cache the next two pages
+        await self.preemptive_cache(session, lookahead=2)
 
     async def handle_nhentai_next_page(
         self,
@@ -78,3 +99,18 @@ class PageHandlerMixin:
             custom_id="nhentai_np",
             disabled=disabled,
         )
+
+    @component_callback("nhentai_np")
+    async def nhentai_np_callback(self, ctx: ComponentContext):
+        try:
+            # Locate the session
+            await self.handle_nhentai_next_page(ctx, self.gallery_sessions[ctx])
+
+        except KeyError:
+            # No session active
+            await ctx.send(
+                "This button was probably created in the past,"
+                " and its session has expired. Please start a new NHentai session.",
+                ephemeral=True,
+            )
+            return

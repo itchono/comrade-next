@@ -28,6 +28,7 @@ class RoleManager(Extension):
         description="Manage roles",
         sub_cmd_name="mark_joinable",
         sub_cmd_description="Mark a role as joinable",
+        dm_permission=False,
     )
     @slash_option(
         name="role",
@@ -70,6 +71,7 @@ class RoleManager(Extension):
         description="Manage roles",
         sub_cmd_name="unmark_joinable",
         sub_cmd_description="Unmark a role as joinable",
+        dm_permission=False,
     )
     @slash_option(
         name="role",
@@ -106,6 +108,7 @@ class RoleManager(Extension):
         description="Manage roles",
         sub_cmd_name="del_removed",
         sub_cmd_description="Deletes roles no longer in the server",
+        dm_permission=False,
     )
     @slash_default_member_permission(Permissions.MANAGE_ROLES)
     async def del_removed_roles(self, ctx: SlashContext):
