@@ -98,13 +98,13 @@ class Reminder:
             jump_url = None
 
         return cls(
-            time_from_now.naive,
-            Arrow.now().naive,
-            context_id(ctx),
-            ctx.author_id,
-            ctx.guild_id,
-            note,
-            jump_url,
+            scheduled_time=time_from_now.naive,
+            created_at=Arrow.now().naive,
+            context_id=context_id(ctx),
+            author_id=ctx.author_id,
+            guild_id=ctx.guild_id,
+            note=note,
+            jump_url=jump_url,
         )
 
     @property
