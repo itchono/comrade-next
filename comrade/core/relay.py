@@ -3,10 +3,9 @@ from __future__ import annotations
 from io import BufferedIOBase, BytesIO
 from logging import getLogger
 from mimetypes import guess_extension
+from typing import Any
 
-from aiohttp import ClientSession
 from interactions import (
-    Client,
     File,
     Guild,
     GuildText,
@@ -17,8 +16,22 @@ from interactions import (
 from interactions.api.events import MessageCreate
 from interactions.client.utils.serializer import get_file_mimetype
 from pymongo.collection import Collection
+from pymongo.errors import DuplicateKeyError
 
 from comrade.core.augmentations import AugmentedClient
+
+
+def give_filename_extension(filename: str, data: bytes) -> str:
+    """
+    Given a filename and some data, guess the extension of the file
+    and return the filename with the extension appended.
+
+    If it already has an extension, return the filename as-is.
+    """
+    if "." in filename:
+        return filename
+    else:
+        return filename + guess_extension(get_file_mimetype(data))
 
 
 class Relay:
@@ -31,10 +44,18 @@ class Relay:
     only accessible to the relay bot. This allows us to upload images
     and other files to Discord, and then store the URL in MongoDB.
 
+    Relay document schema:
+    {
+        "_id": blob source URL, or the attachment url of the message
+        "blob_url": the URL of the blob in the blob storage channel
+        "channel_id": the ID of the channel the blob was sent in
+        "message_id": the ID of the message the blob was sent in
+        "filename": the filename of the blob
+    }
     """
 
+    bot: AugmentedClient
     guild: Guild
-    http_session: ClientSession
     blob_storage_collection: Collection
 
     # Cache for channels
@@ -43,13 +64,25 @@ class Relay:
 
     def __init__(
         self,
+        bot: AugmentedClient,
         guild: Guild,
-        http_session: ClientSession,
         blob_storage_collection: Collection,
     ):
+        self.bot = bot
         self.guild = guild
-        self.http_session = http_session
         self.blob_storage_collection = blob_storage_collection
+
+        @Listener.create(event_name="message_create")
+        async def relay_msg_callback(event: MessageCreate):
+            msg = event.message
+            if msg._channel_id == self.relay_channel.id:
+                bot.logger.info(
+                    f"[RELAY] received message from {msg.author.username} in {msg.guild.name}: {msg.content}"
+                )
+
+        self.bot.add_listener(relay_msg_callback)
+
+        bot.add_listener(relay_msg_callback)
 
     async def ensure_channels(self):
         """
@@ -79,7 +112,7 @@ class Relay:
                 f"Created blob-storage channel in {self.guild.name}, because it did not exist."
             )
 
-        logger.info(f"Relay: all channels initialized in {self.guild.name}")
+        logger.info(f"[RELAY] all channels initialized in {self.guild.name}")
 
     @classmethod
     async def from_bot(cls, bot: AugmentedClient, guild_id: int) -> Relay:
@@ -106,19 +139,19 @@ class Relay:
                 f"For reference, your guilds are {bot.guilds}"
             )
 
-        relay = cls(guild, bot.http_session, bot.db.blobStorage)
+        relay = cls(bot, guild, bot.db.blobStorage)
 
         await relay.ensure_channels()
 
         return relay
 
-    async def upload_blob(
+    async def create_blob_from_bytes(
         self,
         data: BufferedIOBase,
         mongodb_collection: Collection = None,
-        mongodb_document_data: dict = {},
+        document_data: dict = {},
         filename: str = "blob",
-    ) -> Message:
+    ) -> dict[str, Any]:
         """
         Upload a blob to the blob-storage channel and sync it to MongoDB
 
@@ -128,141 +161,175 @@ class Relay:
             The data to store in the blob
         mongodb_collection : Collection, optional
             The MongoDB collection to sync to, by default the one passed to the constructor
-        mongodb_document_data : dict, optional
+        document_data : dict, optional
             Additional fields to store in the MongoDB document, by default {}
         filename : str, optional
-            The filename to use for the blob (minus extension), by default "blob"
+            The filename to use for the blob, by default "blob"
 
         Notes
         -----
         By default, the MongoDB document will contain the following fields:
         - blob_url: the URL of the blob
         - channel_id: the ID of the Discord channel containing the blob
-        - msg_id: the ID of the Discord message containing the blob
+        - message_id: the ID of the Discord message containing the blob
+
+        Returns
+        -------
+        dict[str, Any]
+            The MongoDB document that was created,
+            or the existing document if the blob already exists
 
         """
         if mongodb_collection is None:
             mongodb_collection = self.blob_storage_collection
 
-        # Infer file extension
-        mimetype = get_file_mimetype(data.read())
-        data.seek(0)
-        extension = guess_extension(mimetype, strict=False)
-        if extension is None:
-            extension
+        # Shortcut: if the document is already in the database, return it
+        if "_id" in document_data and (
+            doc := mongodb_collection.find_one({"_id": document_data["_id"]})
+        ):
+            return doc
 
-        assert self.blob_storage_channel.guild.id == self.guild.id
+        filename = give_filename_extension(filename, data.read())
+        data.seek(0)
 
         msg = await self.blob_storage_channel.send(
-            file=File(data, file_name=filename + extension)
+            file=File(data, file_name=filename)
         )
 
         base_document = {
+            "_id": msg.attachments[0].url,
             "blob_url": msg.attachments[0].url,
             "channel_id": self.blob_storage_channel.id,
-            "msg_id": msg.id,
+            "message_id": msg.id,
+            "filename": filename,
         }
-        mongodb_collection.insert_one(base_document | mongodb_document_data)
 
-        return msg
+        # merge the base document with the additional data, with the additional data taking precedence
+        document = base_document | document_data
 
-    async def mirror_blob(
+        # For safety, check if the document is already in the database
+        try:
+            mongodb_collection.insert_one(document)
+            return document
+        except DuplicateKeyError:
+            return mongodb_collection.find_one({"_id": document["_id"]})
+
+    async def create_blob_from_url(
         self,
-        blob_url: str,
+        source_url: str,
         mongodb_collection: Collection = None,
-        mongodb_document_data: dict = {},
+        document_data: dict = {},
         filename: str = "blob",
-    ) -> str:
+    ) -> dict[str, Any]:
         """
         Mirrors an existing blob from the internet to the
         blob-storage channel and sync it to MongoDB
 
         Parameters
         ----------
-        blob_url : str
+        source_url : str
             The URL of the blob to mirror
         mongodb_collection : Collection, optional
             The MongoDB collection to sync to, by default the one passed to the constructor
         mongodb_document_data : dict, optional
             Additional fields to store in the MongoDB document, by default {}
         filename : str, optional
-            The filename to use for the blob (minus extension), by default "blob"
+            The filename to use for the blob by default "blob"
 
         Returns
         -------
-        str
-            The URL of the mirrored blob
-
+        dict[str, Any]
+            The MongoDB document that was created,
 
         This allows the function to transparently mirror
         blobs from the internet to Discord,
         """
 
-        async with self.http_session.get(blob_url) as resp:
+        async with self.bot.http_session.get(source_url) as resp:
+            resp.raise_for_status()
             data = BytesIO(await resp.read())
 
         # Tack on the blob URL to the MongoDB document, so we can find it later
-        modified_document_data = mongodb_document_data | {
-            "source_url": blob_url
-        }
+        modified_document_data = {"_id": source_url} | document_data
 
         # Upload the blob
-        msg = await self.upload_blob(
+        return await self.create_blob_from_bytes(
             data, mongodb_collection, modified_document_data, filename
         )
 
-        return msg.attachments[0].url
-
-    async def get_mirrored_blob(
+    async def find_blob_url(
         self,
-        blob_url: str,
+        source_url: str,
         mongodb_collection: Collection = None,
-        mongodb_document_data: dict = {},
-        filename: str = "blob",
-    ) -> str:
+    ) -> str | None:
         """
-        Gets a blob from the blob-storage channel if it exists,
-        otherwise mirrors it from the internet
+        Gets a blob from the blob-storage channel if it exists.
 
         Parameters
         ----------
-        blob_url : str
-            The URL of the blob to mirror
+        source_url : str
+            The source URL of the blob to find (i.e. the external URL)
         mongodb_collection : Collection, optional
             The MongoDB collection to sync to, by default the one passed to the constructor
-        mongodb_document_data : dict, optional
-            Additional fields to store in the MongoDB document, if the image needs to be uploaded
-            , by default {}
-        filename : str, optional
-            The filename to use for the blob (minus extension), by default "blob"
 
         Returns
         -------
-        str
+        str | None
             The URL of the mirrored blob
-
-        Notes
-        -----
-        it is recommended that the mongoDB collectino have an index
-        on the "source_url" field to speed up lookups
-
-        This is the "high-level" function that should be used over mirror_blob.
 
         """
         if mongodb_collection is None:
             mongodb_collection = self.blob_storage_collection
 
         # Check if the blob is already mirrored
-        doc = mongodb_collection.find_one({"source_url": blob_url})
+        doc = mongodb_collection.find_one({"_id": source_url})
         if doc:
             return doc["blob_url"]
         else:
-            return await self.mirror_blob(
-                blob_url,
-                mongodb_collection,
-                mongodb_document_data,
-                filename,
-            )
+            return None
+
+    async def delete_blob(
+        self,
+        source_url: str,
+        mongodb_collection: Collection = None,
+        keep_message: bool = True,
+    ):
+        """
+        Deletes a tracked blob from MongoDB, and optionally deletes
+        the underlying message as well.
+
+        Deletes all blobs with the given source URL.
+
+        Parameters
+        ----------
+        source_url : str
+            The source URL of the blob to delete (i.e. the external URL)
+        mongodb_collection : Collection, optional
+            The MongoDB collection to sync to, by default the one passed to the constructor
+        keep_message : bool, optional
+            Whether to keep the underlying message, by default True
+            (because Discord storage is free)
+        """
+        if not mongodb_collection:
+            mongodb_collection = self.blob_storage_collection
+
+        doc = mongodb_collection.find_one({"_id": source_url})
+
+        if not doc:
+            raise ValueError("Blob not found")
+
+        result = mongodb_collection.delete_one({"_id": source_url})
+
+        if result.deleted_count == 0:
+            raise ValueError("Blob not found")
+
+        if keep_message:
+            return
+
+        # Delete the message
+        channel = await self.bot.fetch_channel(doc["channel_id"])
+        message = await channel.fetch_message(doc["message_id"])
+        await message.delete()
 
     async def send_message(self, message: str) -> Message:
         """
@@ -280,17 +347,6 @@ class Relay:
 
         """
         return await self.relay_channel.send(message)
-
-    async def register_listener(self, bot: Client):
-        @Listener.create(event_name="message_create")
-        async def relay_msg_callback(event: MessageCreate):
-            msg = event.message
-            if msg._channel_id == self.relay_channel.id:
-                bot.logger.info(
-                    f"Relay: received message from {msg.author.username} in {msg.guild.name}: {msg.content}"
-                )
-
-        bot.add_listener(relay_msg_callback)
 
 
 class RelayMixin:

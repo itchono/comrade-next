@@ -19,9 +19,7 @@ class CustomLogger:
         timezone = TIMEZONE
 
         self.formatter = logging.Formatter(
-            "[%(asctime)s "
-            + timezone
-            + "] [%(name)s] [%(levelname)s]: %(message)s",
+            "[%(asctime)s " + timezone + "] [%(levelname)s]: %(message)s",
             "%Y-%m-%d %H:%M:%S",
         )
 

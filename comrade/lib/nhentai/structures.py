@@ -89,12 +89,24 @@ class NHentaiGallerySession:
 
     user_id: int
     gallery: NHentaiGallery
-    page_number: int = 0
+    current_page_number: int = 0
     spoiler_imgs: bool = False
 
+    def is_valid_page_number(self, page: int) -> bool:
+        """
+        Check if a page number is valid.
+        """
+        return page > 0 and page <= len(self.gallery)
+
+    def page_idx(self, page: int) -> int:
+        """
+        Get the index of a specific page.
+        """
+        return page - 1
+
     @property
-    def page_idx(self) -> int:
-        return self.page_number - 1
+    def current_page_idx(self) -> int:
+        return self.page_idx(self.current_page_number)
 
     def advance_page(self) -> bool:
         """
@@ -102,10 +114,22 @@ class NHentaiGallerySession:
 
         Returns False if there are no more pages.
         """
-        if self.page_number + 1 > len(self.gallery):
+        if not self.is_valid_page_number(self.current_page_number + 1):
             return False
 
-        self.page_number += 1
+        self.current_page_number += 1
+        return True
+
+    def previous_page(self) -> bool:
+        """
+        Go back one page, if possible.
+
+        Returns False if you are already on the first page.
+        """
+        if self.current_page_number - 1 < 0:
+            return False
+
+        self.current_page_number -= 1
         return True
 
     def set_page(self, page_number: int) -> bool:
@@ -117,24 +141,56 @@ class NHentaiGallerySession:
         if page_number < 0 or page_number > len(self.gallery):
             return False
 
-        self.page_number = page_number
+        self.current_page_number = page_number
         return True
+
+    def page_url(self, page: int) -> str:
+        """
+        Get the URL of a specific page.
+        """
+        if page == 0:
+            return self.gallery.cover_url
+        return self.gallery[self.page_idx(page)]
 
     @property
     def current_page_url(self) -> str:
-        if self.page_number == 0:
-            return self.gallery.cover_url
-        return self.gallery[self.page_idx]
+        """
+        The raw URL of the current page.
+        Needs to be mirrored onto Discord's CDN
+        """
+        return self.page_url(self.current_page_number)
+
+    def page_filename(self, page: int) -> str:
+        """
+        Get the filename of a specific page.
+        """
+        page_url = self.page_url(page)
+        filename_end = page_url.split("/")[-1]
+
+        return f"{self.gallery.gallery_id}_page_{filename_end}"
 
     @property
     def current_page_filename(self) -> str:
-        filename_end = self.current_page_url.split("/")[-1]
+        """
+        The filename of the current page.
+        """
+        return self.page_filename(self.current_page_number)
 
-        filename = f"{self.gallery.gallery_id}_page_{filename_end}"
+    @property
+    def current_page_embed(self) -> Embed:
+        """
+        Returns an embed with the current page as an image.
 
-        if self.spoiler_imgs:
-            return f"SPOILER_{filename}"
-        return filename
+        Does NOT include the image URL, as that is handled by the command.
+        """
+        embed = Embed()
+        embed.set_footer(
+            text=(
+                f"Page {self.current_page_number} of {len(self.gallery)} |"
+                f" {self.gallery.short_title} ({self.gallery.gallery_id})"
+            )
+        )
+        return embed
 
 
 @dataclass
