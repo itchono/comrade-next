@@ -10,7 +10,7 @@ from comrade.core.relay import Relay
 
 @pytest.mark.bot
 async def test_relay_init(
-    blank_guild: Guild,
+    temporary_guild: Guild,
     http_session: ClientSession,
     mongodb_instance: Database,
     caplog,
@@ -21,7 +21,7 @@ async def test_relay_init(
     caplog.set_level(logging.INFO, logger=logger_name)
 
     # Create a new relay
-    relay = Relay(blank_guild, http_session, mongodb_instance.blobStorage)
+    relay = Relay(temporary_guild, http_session, mongodb_instance.blobStorage)
     await relay.ensure_channels()
 
     # Inspect logs to verify that the channels were created

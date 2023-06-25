@@ -55,6 +55,10 @@ def event_loop():
     loop = policy.new_event_loop()
     yield loop
 
+    # Teardown
+    pending_tasks = asyncio.all_tasks(loop=loop)
+    loop.run_until_complete(asyncio.gather(*pending_tasks))
+
     loop.close()
 
 

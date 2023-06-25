@@ -8,12 +8,24 @@ from comrade.core.configuration import MONGODB_URI
 
 
 @pytest.fixture(scope="session")
-async def blank_guild(bot: Comrade) -> Guild:
+async def temporary_guild(bot: Comrade) -> Guild:
     """
     Create a blank guild, which is cleaned up after the test
     """
     guild = await Guild.create("Comrade Test Guild Temp", bot)
     yield guild
+
+    # Teardown
+
+    # Check for stray guilds, just in case
+    for stray_guild in bot.guilds:
+        if stray_guild.name == "Comrade Test Guild Temp":
+            try:
+                await stray_guild.delete()
+            except Exception:
+                pass
+
+    # Delete the guild we just made
     await guild.delete()
 
 
