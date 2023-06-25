@@ -32,9 +32,12 @@ async def test_booru_start_gelbooru(ctx: BaseContext):
     # The post list should be depleted now
     await ctx.send("next")
 
+    def check(m: MessageCreate):
+        return m.message.author == ctx.bot.user and m.message.content != "next"
+
     msg_event: MessageCreate = await ctx.bot.wait_for(
         "message_create",
-        checks=lambda m: m.message.author == ctx.bot.user,
+        checks=check,
         timeout=5,
     )
 
@@ -48,6 +51,6 @@ async def test_booru_start_gelbooru(ctx: BaseContext):
     with pytest.raises(asyncio.TimeoutError):
         await ctx.bot.wait_for(
             "message_create",
-            checks=lambda m: m.message.author == ctx.bot.user,
+            checks=check
             timeout=1,
         )
