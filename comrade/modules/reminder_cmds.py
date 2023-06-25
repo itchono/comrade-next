@@ -88,8 +88,10 @@ class Reminders(Extension):
                 author = await self.bot.fetch_member(
                     reminder.author_id, reminder.guild_id
                 )
+                author_name = author.nick if author.nick else author.username
             else:
                 author = await self.bot.fetch_user(reminder.author_id)
+                author_name = author.username
 
             if author is None:
                 # e.g. author is no longer in the guild
@@ -106,7 +108,7 @@ class Reminders(Extension):
                 timestamp=reminder.created_at,
             )
             embed.set_author(
-                name=f"Reminder for {author.nick}",
+                name=f"Reminder for {author_name}",
                 url=reminder.jump_url,
                 icon_url=author.avatar.url,
             )

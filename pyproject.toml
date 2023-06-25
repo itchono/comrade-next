@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 dynamic = ["version"]
 dependencies = [
-    "interactions.py[speedup,voice,jurigged] == 5.6.0",
+    "interactions.py[speedup,voice,jurigged] == 5.7.0",
     "pymongo >= 4.3",
     "beautifulsoup4 >= 4",
     "pydub >= 0.25",

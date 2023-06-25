@@ -1,6 +1,4 @@
-from io import BytesIO
-
-from interactions import Button, ButtonStyle, ComponentContext, File
+from interactions import Button, ButtonStyle, ComponentContext
 from interactions.ext.prefixed_commands import PrefixedContext
 
 from comrade.core.bot_subclass import Comrade
@@ -32,12 +30,14 @@ class PageHandlerMixin:
             The gallery session
 
         """
-        # Request and send the image
-        async with self.bot.http_session.get(session.current_page_url) as resp:
-            img_bytes = BytesIO(await resp.read())
-        img_file = File(img_bytes, file_name=session.current_page_filename)
 
-        await ctx.send(file=img_file, components=[self.next_page_button])
+        # Mirror the image to the bot's blob storage
+        blob_url = await self.bot.relay.get_mirrored_blob(
+            session.current_page_url,
+            filename=session.current_page_filename.split(".")[0],
+        )
+
+        await ctx.send(content=blob_url, components=[self.next_page_button])
 
     async def handle_nhentai_next_page(
         self,

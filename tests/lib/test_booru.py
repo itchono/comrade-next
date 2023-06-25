@@ -14,6 +14,7 @@ def test_booru_dict():
     assert BOORUS["gelbooru"] == booru.Gelbooru
 
 
+@pytest.mark.online
 async def test_booru_session_gelbooru(http_session: ClientSession):
     """
     Integrated test; requests a post from gelbooru,
