@@ -38,6 +38,8 @@ async def test_booru_start_gelbooru(ctx: BaseContext):
 
     assert msg_event.message.content == "No more results found."
 
+    await asyncio.sleep(2)  # Chill a bit to allow messages etc. to be sent
+
     # This should return no response, because the session is over
     await ctx.send("next")
 
