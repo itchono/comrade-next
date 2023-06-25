@@ -51,6 +51,6 @@ async def test_booru_start_gelbooru(ctx: BaseContext):
     with pytest.raises(asyncio.TimeoutError):
         await ctx.bot.wait_for(
             "message_create",
-            checks=check
+            checks=check,
             timeout=1,
         )
