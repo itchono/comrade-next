@@ -1,26 +1,20 @@
-import asyncio
-
 import pytest
-from interactions import Client
+from interactions import Guild
 from pymongo import MongoClient
 from pymongo.database import Database
 
-from comrade.core.configuration import BOT_TOKEN, MONGODB_URI
+from comrade.core.bot_subclass import Comrade
+from comrade.core.configuration import MONGODB_URI
 
 
 @pytest.fixture(scope="session")
-async def generic_bot() -> Client:
-    # call main() without args
-    bot = Client()
-
-    asyncio.create_task(bot.login(token=BOT_TOKEN))
-    asyncio.create_task(bot.start_gateway())
-    # Wait for the bot to be ready
-    await bot.wait_until_ready()
-    yield bot
-
-    # Teardown
-    await bot.stop()
+async def blank_guild(bot: Comrade) -> Guild:
+    """
+    Create a blank guild, which is cleaned up after the test
+    """
+    guild = await Guild.create("Comrade Test Guild Temp", bot)
+    yield guild
+    await guild.delete()
 
 
 @pytest.fixture(scope="session")

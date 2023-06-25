@@ -37,6 +37,3 @@ def test_emojify(example_str: str, fake_emoji: CustomEmoji):
     assert emojify([fake_emoji], example_str) == example_str.replace(
         " ", "<:test_emoji:123456789012345678>"
     )
-
-
-# Pending: a way to test emojify offline

@@ -3,8 +3,14 @@ import asyncio
 import aiohttp
 import orjson
 import pytest
+from interactions import Client, Guild, GuildText
+
+from comrade.bot import main
+from comrade.core.bot_subclass import Comrade
+from comrade.core.configuration import TEST_GUILD_ID
 
 
+# Test config options
 def pytest_addoption(parser):
     parser.addoption(
         "--run-bot",
@@ -18,6 +24,7 @@ def pytest_addoption(parser):
     )
 
 
+# Apply flags
 def pytest_collection_modifyitems(config, items):
     # Skip certain tests if the user doesn't specify the option
     if not config.getoption("--run-bot"):
@@ -47,4 +54,33 @@ def event_loop():
     policy = asyncio.get_event_loop_policy()
     loop = policy.new_event_loop()
     yield loop
+
     loop.close()
+
+
+# reusable bot fixture (Comrade instance)
+@pytest.fixture(scope="session")
+async def bot() -> Comrade:
+    # call main() without args
+    bot = main(args=[], test_mode=True)
+    # Wait for the bot to be ready
+    await bot.wait_until_ready()
+    yield bot
+
+    # Teardown
+    await bot.stop()
+
+
+@pytest.fixture(scope="session")
+async def guild(bot: Client) -> Guild:
+    guild = await bot.fetch_guild(TEST_GUILD_ID)
+    return guild
+
+
+@pytest.fixture(scope="session")
+async def channel(guild: Guild) -> GuildText:
+    channel = await guild.create_text_channel("auto-testing")
+    # TODO: configure channel options like nsfw
+    yield channel
+    # Teardown
+    await channel.delete()
