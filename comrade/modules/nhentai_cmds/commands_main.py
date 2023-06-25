@@ -1,3 +1,5 @@
+from statistics import mean, median, stdev
+
 from interactions import (
     Extension,
     Message,
@@ -30,6 +32,33 @@ from .search_cmds import NHSearchHandler
 
 class NHentai(Extension, NHSearchHandler, NHPageHandler):
     bot: Comrade
+
+    @slash_command(
+        name="nhentai",
+        description="NHentai viewer",
+        sub_cmd_name="view_performance",
+        sub_cmd_description="View how fast response times are for loading pages",
+        nsfw=True,
+    )
+    async def nhentai_view_performance(self, ctx: SlashContext):
+        if not self.page_response_times:
+            await ctx.send(
+                "No page response times to show yet."
+                " Try using the `nhentai gallery` command first."
+            )
+            return
+
+        mean_time = mean(self.page_response_times)
+        median_time = median(self.page_response_times)
+        stdev_time = stdev(self.page_response_times)
+        count = len(self.page_response_times)
+
+        await ctx.send(
+            f"Mean page response time: {mean_time:.2f} seconds\n"
+            f"Median page response time: {median_time:.2f} seconds\n"
+            f"Standard deviation of page response times: {stdev_time:.2f} seconds\n"
+            f"Sample size: {count}"
+        )
 
     @slash_command(
         name="nhentai",

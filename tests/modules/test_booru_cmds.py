@@ -27,6 +27,8 @@ async def test_booru_start_gelbooru(ctx: BaseContext):
         == "Site: Gelbooru | Page 1 | Post 1 | Type 'next' to advance"
     )
 
+    await asyncio.sleep(2)  # Chill a bit to allow messages etc. to be sent
+
     # The post list should be depleted now
     await ctx.send("next")
 

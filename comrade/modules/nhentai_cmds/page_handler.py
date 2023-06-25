@@ -1,3 +1,6 @@
+from collections import deque
+
+import arrow
 from interactions import (
     Button,
     ButtonStyle,
@@ -14,6 +17,9 @@ from .gallery_init import NHGalleryInit
 
 
 class NHPageHandler(NHGalleryInit):
+    # store the last 100 page response times
+    page_response_times = deque(maxlen=100)
+
     async def send_current_gallery_page(
         self,
         ctx: PrefixedContext | ComponentContext,
@@ -30,6 +36,9 @@ class NHPageHandler(NHGalleryInit):
             The gallery session
 
         """
+        # Metrics
+        start_time = arrow.utcnow()
+
         # Cache
         blob_url = await self.bot.relay.find_blob_url(session.current_page_url)
         if blob_url is None:
@@ -43,6 +52,10 @@ class NHPageHandler(NHGalleryInit):
         embed.set_image(url=blob_url)
 
         await ctx.send(embed=embed, components=[self.next_page_button])
+
+        # Metrics
+        end_time = arrow.utcnow()
+        self.page_response_times.append((end_time - start_time).total_seconds())
 
         # pre-emptively cache the next two pages
         await self.preemptive_cache(session, lookahead=2)
