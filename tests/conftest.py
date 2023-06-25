@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import suppress
 
 import aiohttp
 import orjson
@@ -56,8 +57,10 @@ def event_loop():
     yield loop
 
     # Teardown
-    pending_tasks = asyncio.all_tasks(loop=loop)
-    loop.run_until_complete(asyncio.gather(*pending_tasks))
+    with suppress(asyncio.CancelledError):
+        # try to finish all pending tasks
+        pending_tasks = asyncio.all_tasks(loop=loop)
+        loop.run_until_complete(asyncio.gather(*pending_tasks))
 
     loop.close()
 

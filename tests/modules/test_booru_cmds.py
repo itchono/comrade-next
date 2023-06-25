@@ -45,5 +45,5 @@ async def test_booru_start_gelbooru(ctx: BaseContext):
         await ctx.bot.wait_for(
             "message_create",
             checks=lambda m: m.message.author == ctx.bot.user,
-            timeout=2,
+            timeout=1,
         )
