@@ -11,7 +11,7 @@ from comrade.core.configuration import (
     TEST_GUILD_ID,
 )
 from comrade.core.const import CLIENT_INIT_KWARGS
-from comrade.core.relay import RelayMixin
+from comrade.core.relay_system import RelayMixin
 from comrade.lib.discord_utils import messageable_from_context_id
 
 

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from io import BufferedIOBase, BytesIO
 from logging import getLogger
-from mimetypes import guess_extension
 from typing import Any
 
 from interactions import (
@@ -14,27 +13,16 @@ from interactions import (
     logger_name,
 )
 from interactions.api.events import MessageCreate
-from interactions.client.utils.serializer import get_file_mimetype
 from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError
 
 from comrade.core.augmentations import AugmentedClient
 
-
-def give_filename_extension(filename: str, data: bytes) -> str:
-    """
-    Given a filename and some data, guess the extension of the file
-    and return the filename with the extension appended.
-
-    If it already has an extension, return the filename as-is.
-    """
-    if "." in filename:
-        return filename
-    else:
-        return filename + guess_extension(get_file_mimetype(data))
+from .cache_mixin import RelayCacheMixin
+from .utils import give_filename_extension
 
 
-class Relay:
+class Relay(RelayCacheMixin):
     """
     Server relay system, used for communication between discord bots, and storing blobs
 
@@ -52,13 +40,17 @@ class Relay:
         "message_id": the ID of the message the blob was sent in
         "filename": the filename of the blob
     }
+
+    An in-memory cache is used to avoid unnecessary database queries.
+    The in-memory cache starts off empty on startup, and is populated
+    as requests are made to find_blob_by_url() and create_blob_from_bytes().
     """
 
     bot: AugmentedClient
     guild: Guild
     blob_storage_collection: Collection
 
-    # Cache for channels
+    # channels
     blob_storage_channel: GuildText = None
     relay_channel: GuildText = None
 
@@ -77,7 +69,8 @@ class Relay:
             msg = event.message
             if msg._channel_id == self.relay_channel.id:
                 bot.logger.info(
-                    f"[RELAY] received message from {msg.author.username} in {msg.guild.name}: {msg.content}"
+                    f"[RELAY] received message from {msg.author.username}"
+                    f" in {msg.guild.name}: {msg.content}"
                 )
 
         self.bot.add_listener(relay_msg_callback)
@@ -187,6 +180,8 @@ class Relay:
         if "_id" in document_data and (
             doc := mongodb_collection.find_one({"_id": document_data["_id"]})
         ):
+            # Cache the document
+            self.cache_blob(doc)
             return doc
 
         filename = give_filename_extension(filename, data.read())
@@ -210,6 +205,8 @@ class Relay:
         # For safety, check if the document is already in the database
         try:
             mongodb_collection.insert_one(document)
+            # Cache the document (non-blocking)
+            self.cache_blob(document)
             return document
         except DuplicateKeyError:
             return mongodb_collection.find_one({"_id": document["_id"]})
@@ -257,7 +254,7 @@ class Relay:
             data, mongodb_collection, modified_document_data, filename
         )
 
-    async def find_blob_url(
+    async def find_blob_by_url(
         self,
         source_url: str,
         mongodb_collection: Collection = None,
@@ -278,12 +275,18 @@ class Relay:
             The URL of the mirrored blob
 
         """
+        # check cache
+        if doc := self.get_cached_blob(source_url):
+            return doc["blob_url"]
+
         if mongodb_collection is None:
             mongodb_collection = self.blob_storage_collection
 
         # Check if the blob is already mirrored
         doc = mongodb_collection.find_one({"_id": source_url})
         if doc:
+            # Cache the document to speed up future lookups
+            self.cache_blob(doc)
             return doc["blob_url"]
         else:
             return None
@@ -320,6 +323,9 @@ class Relay:
 
         result = mongodb_collection.delete_one({"_id": source_url})
 
+        # Remove the document from the cache
+        self.uncache_blob(source_url)
+
         if result.deleted_count == 0:
             raise ValueError("Blob not found")
 
@@ -347,19 +353,3 @@ class Relay:
 
         """
         return await self.relay_channel.send(message)
-
-
-class RelayMixin:
-    relay: Relay
-
-    async def init_relay(self, guild_id: int):
-        """
-        Initialize the relay system
-
-        Parameters
-        ----------
-        guild_id : int
-            The ID of the guild to use
-
-        """
-        self.relay = await Relay.from_bot(self, guild_id)

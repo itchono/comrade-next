@@ -40,7 +40,9 @@ class NHPageHandler(NHGalleryInit):
         start_time = arrow.utcnow()
 
         # Cache
-        blob_url = await self.bot.relay.find_blob_url(session.current_page_url)
+        blob_url = await self.bot.relay.find_blob_by_url(
+            session.current_page_url
+        )
         if blob_url is None:
             doc = await self.bot.relay.create_blob_from_url(
                 session.current_page_url,

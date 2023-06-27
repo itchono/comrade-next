@@ -6,7 +6,7 @@ from interactions import Guild, logger_name
 from pymongo.database import Database
 
 from comrade.core.bot_subclass import Comrade
-from comrade.core.relay import Relay
+from comrade.core.relay_system import Relay
 
 
 @pytest.mark.bot
@@ -21,8 +21,11 @@ async def test_relay_init(
     """
     caplog.set_level(logging.INFO, logger=logger_name)
 
+    # ensure the collection is dropped before testing
+    mongodb_instance.drop_collection("tempCollection")
+
     # Create a new relay
-    relay = Relay(bot, temporary_guild, mongodb_instance.blobStorage)
+    relay = Relay(bot, temporary_guild, mongodb_instance.tempCollection)
     await relay.ensure_channels()
 
     # Inspect logs to verify that the channels were created
@@ -35,7 +38,7 @@ async def test_relay_init(
     assert mirrored_doc["_id"] == source_url
 
     # Test that the blob was mirrored
-    check_url = await relay.find_blob_url(source_url)
+    check_url = await relay.find_blob_by_url(source_url)
     assert check_url == mirrored_doc["blob_url"]
 
     await asyncio.sleep(1)  # Wait for the message to be sent
@@ -46,6 +49,9 @@ async def test_relay_init(
     )
 
     assert msg.attachments[0].url == check_url
+
+    # Check cache
+    assert source_url in relay.local_cache
 
     # Test deletion
     await relay.delete_blob(source_url, keep_message=False)
@@ -59,3 +65,6 @@ async def test_relay_init(
         )
         is None
     )
+
+    # Check cache has deleted the blob
+    assert source_url not in relay.local_cache
