@@ -51,7 +51,7 @@ async def get_channel_webhook(channel: GuildText) -> Webhook:
 
 async def send_channel_webhook(
     channel: GuildText, username: str, avatar_url: str, **kwargs
-) -> Message:
+) -> Message | None:
     """
     Send a message as a webhook using a different username and avatar.
 
@@ -68,7 +68,7 @@ async def send_channel_webhook(
 
     Returns
     -------
-    interactions.Message
+    interactions.Message | None
         The message sent.
     """
     webhook = await get_channel_webhook(channel)

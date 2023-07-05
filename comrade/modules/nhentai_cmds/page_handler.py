@@ -1,9 +1,9 @@
+import asyncio
 from collections import deque
+from enum import Enum
 
 import arrow
 from interactions import (
-    Button,
-    ButtonStyle,
     ComponentContext,
     component_callback,
 )
@@ -16,6 +16,18 @@ from comrade.lib.nhentai.structures import (
 from .gallery_init import NHGalleryInit
 
 
+class PageDirection(Enum):
+    NEXT = "next"
+    PREV = "prev"
+
+
+class PrefetchStrategy(Enum):
+    NONE = "none"
+    LOOKAHEAD = "lookahead"
+    LOOKBACK = "lookback"
+    BOTH = "both"
+
+
 class NHPageHandler(NHGalleryInit):
     # store the last 100 page response times
     page_response_times = deque(maxlen=100)
@@ -24,6 +36,7 @@ class NHPageHandler(NHGalleryInit):
         self,
         ctx: PrefixedContext | ComponentContext,
         session: NHentaiGallerySession,
+        prefetch_strategy: PrefetchStrategy = PrefetchStrategy.NONE,
     ):
         """
         Sends the currently active page of the gallery session.
@@ -34,6 +47,9 @@ class NHPageHandler(NHGalleryInit):
             The context object, originating either from a button or channel message
         session: NHentaiGallerySession
             The gallery session
+        prefetch_strategy: PrefetchStrategy
+            Whether or not to cache the next few pages,
+            and if so, whether to look ahead or look back (or both)
 
         """
         # Metrics
@@ -53,19 +69,35 @@ class NHPageHandler(NHGalleryInit):
         embed = session.current_page_embed
         embed.set_image(url=blob_url)
 
-        await ctx.send(embed=embed, components=[self.next_page_button])
+        await ctx.send(
+            embed=embed,
+            components=[
+                self.prev_page_button(
+                    disabled=session.current_page_number == 1
+                ),
+                self.next_page_button(),
+            ],
+        )
 
         # Metrics
         end_time = arrow.utcnow()
         self.page_response_times.append((end_time - start_time).total_seconds())
 
-        # pre-emptively cache the next two pages
-        await self.preemptive_cache(session, lookahead=2)
+        # Cache images
+        if prefetch_strategy == PrefetchStrategy.LOOKAHEAD:
+            asyncio.create_task(self.preemptive_cache(session, lookahead=2))
+        elif prefetch_strategy == PrefetchStrategy.LOOKBACK:
+            asyncio.create_task(self.preemptive_cache(session, lookback=2))
+        elif prefetch_strategy == PrefetchStrategy.BOTH:
+            asyncio.create_task(
+                self.preemptive_cache(session, lookback=2, lookahead=2)
+            )
 
-    async def handle_nhentai_next_page(
+    async def handle_nhentai_change_page(
         self,
         ctx: PrefixedContext | ComponentContext,
         session: NHentaiGallerySession,
+        direction: PageDirection,
     ):
         """
         Handles the "np" command for nhentai galleries.
@@ -79,34 +111,54 @@ class NHPageHandler(NHGalleryInit):
             The context object, originating either from a button or channel message
         session: NHentaiGallerySession
             The gallery session
-
+        direction: PageDirection
+            The direction to change the page in
+            either "next" or "prev"
         """
 
-        # Check if there are more pages
-        if not session.advance_page():
-            await ctx.send("You have reached the end of this work.")
-            del self.gallery_sessions[ctx]
-            return
+        if direction == PageDirection.NEXT:
+            # Check if there are more pages
+            if not session.advance_page():
+                await ctx.send("You have reached the end of this work.")
+                del self.gallery_sessions[ctx]
+                return
 
-        await self.send_current_gallery_page(ctx, session)
+            await self.send_current_gallery_page(
+                ctx, session, prefetch_strategy=PrefetchStrategy.LOOKAHEAD
+            )
+        elif direction == PageDirection.PREV:
+            if not session.previous_page():
+                await ctx.send("You are at the beginning of this work.")
+                return
 
-    @property
-    def next_page_button(self, disabled: bool = False):
-        """
-        Button used to advance pages in an nhentai gallery.
-        """
-        return Button(
-            style=ButtonStyle.PRIMARY,
-            label="Next Page",
-            custom_id="nhentai_np",
-            disabled=disabled,
-        )
+            await self.send_current_gallery_page(
+                ctx, session, prefetch_strategy=PrefetchStrategy.LOOKBACK
+            )
 
     @component_callback("nhentai_np")
     async def nhentai_np_callback(self, ctx: ComponentContext):
         try:
             # Locate the session
-            await self.handle_nhentai_next_page(ctx, self.gallery_sessions[ctx])
+            await self.handle_nhentai_change_page(
+                ctx, self.gallery_sessions[ctx], direction=PageDirection.NEXT
+            )
+
+        except KeyError:
+            # No session active
+            await ctx.send(
+                "This button was probably created in the past,"
+                " and its session has expired. Please start a new NHentai session.",
+                ephemeral=True,
+            )
+            return
+
+    @component_callback("nhentai_pp")
+    async def nhentai_pp_callback(self, ctx: ComponentContext):
+        try:
+            # Locate the session
+            await self.handle_nhentai_change_page(
+                ctx, self.gallery_sessions[ctx], direction=PageDirection.PREV
+            )
 
         except KeyError:
             # No session active

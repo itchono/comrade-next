@@ -21,7 +21,7 @@ async def test_gallery_start(ctx: BaseContext, nhentai_ext: NHentai):
     start_embed_msg = (await ctx.channel.fetch_messages(limit=1))[0]
     assert (
         start_embed_msg.content
-        == "Type `np` (or click the button) to start reading, and advance pages."
+        == "Type `np` (or click the buttons) to start reading, and advance pages."
     )
 
     start_embed = start_embed_msg.embeds[0]
@@ -40,7 +40,9 @@ async def test_gallery_next_page(ctx: BaseContext):
     await ctx.send("np")
 
     msg_event: MessageCreate = await ctx.bot.wait_for(
-        "message_create", checks=lambda e: e.message.author == ctx.author
+        "message_create",
+        checks=lambda e: e.message.author == ctx.author and e.message.embeds,
+        timeout=10,
     )
     embed = msg_event.message.embeds[0]
 
@@ -53,7 +55,9 @@ async def test_gallery_next_page(ctx: BaseContext):
 
     await ctx.send("np")
     msg_event: MessageCreate = await ctx.bot.wait_for(
-        "message_create", checks=lambda e: e.message.author == ctx.author
+        "message_create",
+        checks=lambda e: e.message.author == ctx.author,
+        timeout=10,
     )
 
     assert msg_event.message.content == "You have reached the end of this work."

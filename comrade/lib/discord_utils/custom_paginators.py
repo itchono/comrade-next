@@ -29,7 +29,7 @@ class DynamicPaginator:
     message: Message
     current_page: int = 1
     custom_id_root: str
-    pages: dict[int, list[ActionRow]]
+    pages: dict[int, tuple[list[ActionRow], str]]
     uuid: str
 
     generate_page: Callable[[int], Awaitable[tuple[list[ActionRow], str]]]
@@ -179,7 +179,7 @@ class DynamicPaginator:
         """
         page_components, content = await self.get_page(self.current_page)
 
-        await ctx.send(
+        return await ctx.send(
             content=content, components=page_components + self.page_navigation
         )
 

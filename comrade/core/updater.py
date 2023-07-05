@@ -41,14 +41,14 @@ def check_updates_on_branch() -> str:
     )
 
 
-def restart_process(notify_channel: int = None) -> None:
+def restart_process(notify_channel: int | None = None) -> None:
     """
     Restart the bot with all the same arguments it was launched with,
     except for the notify_channel argument.
 
     Parameters
     ----------
-    notify_channel : int
+    notify_channel : int | None
         The channel ID to send a message to after restarting;
         if None, no message will be sent.
     """

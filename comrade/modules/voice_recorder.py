@@ -7,14 +7,19 @@ from interactions import (
     File,
     OptionType,
     SlashContext,
+    User,
     slash_command,
     slash_option,
 )
 from pydub import AudioSegment
 
+from comrade.core.bot_subclass import Comrade
+
 
 class VoiceRecorder(Extension):
-    @slash_command(description="record some audio")
+    bot: Comrade
+
+    @slash_command(description="record some audio", dm_permission=False)
     @slash_option(
         name="duration",
         description="duration to record for (seconds)",
@@ -24,6 +29,10 @@ class VoiceRecorder(Extension):
         max_value=30,
     )
     async def record(self, ctx: SlashContext, duration: int):
+        if isinstance(ctx.author, User):
+            # This should never happen, but just in case
+            await ctx.send("This command can only be used in a server.")
+
         voice_state = await ctx.author.voice.channel.connect()
 
         # Start recording

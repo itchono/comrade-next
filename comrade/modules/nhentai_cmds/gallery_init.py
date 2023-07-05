@@ -1,3 +1,5 @@
+import asyncio
+
 from interactions import (
     SlashContext,
 )
@@ -48,10 +50,13 @@ class NHGalleryInit(NHCacher):
 
         await ctx.send(
             embed=nh_gallery.start_embed,
-            content="Type `np` (or click the button) to"
+            content="Type `np` (or click the buttons) to"
             " start reading, and advance pages.",
-            components=[self.next_page_button],
+            components=[
+                self.prev_page_button(disabled=True),
+                self.next_page_button(),
+            ],
         )
 
-        # preemptively cache the next few pages
-        await self.preemptive_cache(session, lookahead=3)
+        # preemptively cache the next few pages (nonblocking)
+        asyncio.create_task(self.preemptive_cache(session, lookahead=3))

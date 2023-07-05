@@ -199,13 +199,14 @@ class Relay(RelayCacheMixin):
             "filename": filename,
         }
 
-        # merge the base document with the additional data, with the additional data taking precedence
+        # merge the base document with the additional data, with the
+        # additional data taking precedence
         document = base_document | document_data
 
         # For safety, check if the document is already in the database
         try:
             mongodb_collection.insert_one(document)
-            # Cache the document (non-blocking)
+            # Cache the document
             self.cache_blob(document)
             return document
         except DuplicateKeyError:
@@ -323,7 +324,7 @@ class Relay(RelayCacheMixin):
 
         result = mongodb_collection.delete_one({"_id": source_url})
 
-        # Remove the document from the cache
+        # Remove the document from the local cache
         self.uncache_blob(source_url)
 
         if result.deleted_count == 0:

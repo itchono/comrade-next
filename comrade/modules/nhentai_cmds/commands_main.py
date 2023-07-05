@@ -24,7 +24,7 @@ from comrade.lib.nhentai.structures import (
     NHentaiSortOrder,
 )
 
-from .page_handler import NHPageHandler
+from .page_handler import NHPageHandler, PageDirection, PrefetchStrategy
 from .search_cmds import NHSearchHandler
 
 
@@ -103,7 +103,9 @@ class NHentai(Extension, NHSearchHandler, NHPageHandler):
             )
             return
 
-        await self.send_current_gallery_page(ctx, session)
+        await self.send_current_gallery_page(
+            ctx, session, prefetch_strategy=PrefetchStrategy.BOTH
+        )
 
     @slash_command(
         name="nhentai",
@@ -168,6 +170,8 @@ class NHentai(Extension, NHSearchHandler, NHPageHandler):
     async def nhentai_listener(self, message_event: MessageCreate):
         """
         Listens for "np" in channels where a gallery session is active.
+
+        TODO: maybe remove this and just use button navigation?
         """
         message: Message = message_event.message
 
@@ -177,7 +181,9 @@ class NHentai(Extension, NHSearchHandler, NHPageHandler):
                     ctx = PrefixedContext.from_message(self.bot, message)
                     # Locate the session
                     nh_gallery_session = self.gallery_sessions[ctx]
-                    await self.handle_nhentai_next_page(ctx, nh_gallery_session)
+                    await self.handle_nhentai_change_page(
+                        ctx, nh_gallery_session, PageDirection.NEXT
+                    )
 
                 except KeyError:
                     # No session active
