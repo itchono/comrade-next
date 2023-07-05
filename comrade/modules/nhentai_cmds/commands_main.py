@@ -24,7 +24,7 @@ from comrade.lib.nhentai.structures import (
     NHentaiSortOrder,
 )
 
-from .page_handler import NHPageHandler, PrefetchStrategy
+from .page_handler import NHPageHandler, PageDirection, PrefetchStrategy
 from .search_cmds import NHSearchHandler
 
 
@@ -182,7 +182,7 @@ class NHentai(Extension, NHSearchHandler, NHPageHandler):
                     # Locate the session
                     nh_gallery_session = self.gallery_sessions[ctx]
                     await self.handle_nhentai_change_page(
-                        ctx, nh_gallery_session, "next"
+                        ctx, nh_gallery_session, PageDirection.NEXT
                     )
 
                 except KeyError:

@@ -42,6 +42,7 @@ async def test_gallery_next_page(ctx: BaseContext):
     msg_event: MessageCreate = await ctx.bot.wait_for(
         "message_create",
         checks=lambda e: e.message.author == ctx.author and e.message.embeds,
+        timeout=10,
     )
     embed = msg_event.message.embeds[0]
 
@@ -54,7 +55,9 @@ async def test_gallery_next_page(ctx: BaseContext):
 
     await ctx.send("np")
     msg_event: MessageCreate = await ctx.bot.wait_for(
-        "message_create", checks=lambda e: e.message.author == ctx.author
+        "message_create",
+        checks=lambda e: e.message.author == ctx.author,
+        timeout=10,
     )
 
     assert msg_event.message.content == "You have reached the end of this work."
