@@ -15,4 +15,6 @@ def give_filename_extension(filename: str, data: bytes) -> str:
     if "." in filename:
         return filename
     else:
-        return filename + guess_extension(get_file_mimetype(data))
+        if not (ext := guess_extension(get_file_mimetype(data))):
+            ext = ""
+        return filename + ext

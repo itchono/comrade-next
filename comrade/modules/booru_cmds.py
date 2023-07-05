@@ -78,7 +78,7 @@ class Booru(Extension):
 
         await ctx.send(
             embed=booru_session.formatted_embed,
-            components=[self.next_page_button],
+            components=[self.next_post_button],
         )
 
     @booru.autocomplete("tags")
@@ -123,19 +123,19 @@ class Booru(Extension):
             del self.booru_sessions[ctx]
             return
         await ctx.send(
-            embed=session.formatted_embed, components=[self.next_page_button]
+            embed=session.formatted_embed,
+            components=[self.next_post_button],
         )
 
     @property
-    def next_page_button(self, disabled: bool = False):
+    def next_post_button(self):
         """
-        Button used to advance pages in an nhentai gallery.
+        Button used to advance pages in a booru session.
         """
         return Button(
             style=ButtonStyle.PRIMARY,
             label="Next Post",
             custom_id="booru_next",
-            disabled=disabled,
         )
 
     @listen("message_create")

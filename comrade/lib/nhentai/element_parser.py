@@ -1,3 +1,5 @@
+from re import Match
+
 import bs4
 
 from comrade.lib.nhentai.regex import (
@@ -24,7 +26,11 @@ def get_gallery_id_from_cover_block(block: bs4.Tag) -> int:
         The gallery ID.
     """
     cover_a = block.find("a")
-    gallery_id = int(GALLERY_ID_REGEX.search(cover_a["href"]).group(1))
+    search_result = GALLERY_ID_REGEX.search(cover_a["href"])
+    if not isinstance(search_result, Match):
+        raise ValueError("Could not determine gallery ID from cover block")
+
+    gallery_id = int(search_result.group(1))
 
     return gallery_id
 
@@ -46,7 +52,10 @@ def get_images_id_from_noscript_block(block: bs4.Tag) -> int:
     int
         The images ID.
     """
-    images_id = int(IMAGES_ID_REGEX.search(str(block)).group(1))
+    search_result = IMAGES_ID_REGEX.search(str(block))
+    if not isinstance(search_result, Match):
+        raise ValueError("Could not determine images ID from noscript block")
+    images_id = int(search_result.group(1))
 
     return images_id
 
@@ -126,7 +135,9 @@ def get_gallery_id_and_title_from_gallery_div(
 
     # Find the <div> tag with the title
     title_div = gallery_div.find("div", class_="caption")
-    return (
-        int(GALLERY_ID_REGEX.search(gallery_a["href"]).group(1)),
-        title_div.text,
-    )
+
+    search_result = GALLERY_ID_REGEX.search(gallery_a["href"])
+    if not isinstance(search_result, Match):
+        raise ValueError("Could not determine gallery ID from gallery div")
+
+    return (int(search_result.group(1)), title_div.text)

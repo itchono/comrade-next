@@ -59,7 +59,7 @@ async def test_search_click(
     start_embed_msg = (await ctx.channel.fetch_messages(limit=1))[0]
     assert (
         start_embed_msg.content
-        == "Type `np` (or click the button) to start reading, and advance pages."
+        == "Type `np` (or click the buttons) to start reading, and advance pages."
     )
 
     start_embed = start_embed_msg.embeds[0]
