@@ -126,7 +126,7 @@ class NHentaiGallerySession:
 
         Returns False if you are already on the first page.
         """
-        if self.current_page_number - 1 < 0:
+        if self.current_page_number - 1 < 1:
             return False
 
         self.current_page_number -= 1
