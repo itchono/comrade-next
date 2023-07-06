@@ -32,10 +32,12 @@ async def test_gallery_start(ctx: BaseContext, nhentai_ext: NHentai):
 
 
 @pytest.mark.bot
-async def test_gallery_next_page(ctx: BaseContext):
+async def test_gallery_next_page_from_init(ctx: BaseContext):
     """
     Test continuity of gallery pages.
     Has to be executed after test_gallery_start.
+
+    Uses message response
     """
     await ctx.send("np")
 
@@ -53,7 +55,16 @@ async def test_gallery_next_page(ctx: BaseContext):
     # assert embed.image.url is not None
     # bugged, pending interactions.py fix
 
+
+@pytest.mark.bot
+async def test_gallery_end(ctx: BaseContext, nhentai_ext: NHentai):
+    """
+    Test that gallery terminates when we reach the end.
+
+    Uses message response, as well as direct button callback.
+    """
     await ctx.send("np")
+
     msg_event: MessageCreate = await ctx.bot.wait_for(
         "message_create",
         checks=lambda e: e.message.author == ctx.author,
@@ -61,3 +72,14 @@ async def test_gallery_next_page(ctx: BaseContext):
     )
 
     assert msg_event.message.content == "You have reached the end of this work."
+
+    # Now try to go to next page, make sure it doesn't work
+    await nhentai_ext.nhentai_np_callback.callback(ctx)
+
+    msg = (await ctx.channel.fetch_messages(limit=1))[0]
+
+    assert (
+        msg.content
+        == "This button was probably created in the past, and its session"
+        " has expired. Please start a new NHentai session."
+    )

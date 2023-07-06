@@ -28,7 +28,6 @@ class DynamicPaginator:
     maximum_pages: int
     message: Message
     current_page: int = 1
-    custom_id_root: str
     pages: dict[int, tuple[list[ActionRow], str]]
     uuid: str
 

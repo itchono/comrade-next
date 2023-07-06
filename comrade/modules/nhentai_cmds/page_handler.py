@@ -72,9 +72,7 @@ class NHPageHandler(NHGalleryInit):
         await ctx.send(
             embed=embed,
             components=[
-                self.prev_page_button(
-                    disabled=session.current_page_number == 1
-                ),
+                self.prev_page_button(),
                 self.next_page_button(),
             ],
         )
