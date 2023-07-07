@@ -81,8 +81,6 @@ class Relay(RelayCacheMixin):
 
         self.bot.add_listener(relay_msg_callback)
 
-        bot.add_listener(relay_msg_callback)
-
     async def ensure_channels(self):
         """
         Ensure that all channels exist
