@@ -98,3 +98,27 @@ async def test_autocomplete_danbooru(http_session: ClientSession):
 
     assert "tsushima_yoshiko" in suggestions
     assert "tsushima_(kancolle)" in suggestions
+
+
+@pytest.mark.online
+async def test_tags_too_long(http_session: ClientSession):
+    gelbooru = booru.Gelbooru(http_session)
+
+    # An image with too many tags (seriously, there are a lot)
+    session = BooruSession(gelbooru, "id:1077085", sort_random=False)
+
+    assert await session.init_posts(0, limit_count=1)
+
+    # artificially inject a title that is too long
+    session.query = "abcdefghijklmnopqrstuvwxyzabcdef" * 10
+
+    embed = session.formatted_embed
+
+    # ensure embed field is truncated properly
+    field_0 = embed.fields[0]
+    assert len(field_0.value) == 1024
+    assert field_0.value.endswith("...")
+
+    # ensure embed title is truncated properly
+    assert len(embed.title) == 256
+    assert embed.title.endswith("...")
