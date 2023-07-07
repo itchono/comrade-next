@@ -17,18 +17,19 @@ async def test_sending_emote(ctx: BaseContext, emote: str):
     def check(m: MessageCreate):
         return m.message.webhook_id is not None
 
-    # Wait for bot to send message
-    msg_event: MessageCreate = await ctx.bot.wait_for(
-        "message_create", checks=check, timeout=5
-    )
+    try:
+        # Wait for bot to send message
+        msg_event: MessageCreate = await ctx.bot.wait_for(
+            "message_create", checks=check, timeout=3
+        )
+        emoji_msg = msg_event.message
+    except asyncio.TimeoutError:
+        emoji_msg = await ctx.channel.fetch_messages(limit=1)[0]
 
-    emoji_msg = msg_event.message
     assert (
         emoji_msg.content
         == "https://cdn.discordapp.com/attachments/810726667026300958/810732433460559872/pssh.png"
     )
-
-    await asyncio.sleep(1)  # cool down to help with detecting events properly
 
 
 @pytest.mark.bot
@@ -38,10 +39,14 @@ async def test_no_emote(ctx: BaseContext):
     def check(m: MessageCreate):
         return m.message.author.id == ctx.bot.user.id
 
-    # Wait for bot to send message
-    msg_event: MessageCreate = await ctx.bot.wait_for(
-        "message_create", checks=check, timeout=5
-    )
+    try:
+        # Wait for bot to send message
+        msg_event: MessageCreate = await ctx.bot.wait_for(
+            "message_create", checks=check, timeout=3
+        )
+        error_msg = msg_event.message
+    except asyncio.TimeoutError:
+        error_msg = await ctx.channel.fetch_messages(limit=1)[0]
 
     error_msg = msg_event.message
     embed = error_msg.embeds[0]

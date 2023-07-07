@@ -23,8 +23,12 @@ class Maintainence(Extension):
     async def restart(self, ctx: SlashContext):
         """
         Restarts the bot, notifying the channel it was launched from.
+
+        Stops the bot to ensure a clean restart.
+        (stops listening for new commands)
         """
         await ctx.send("Restarting...", ephemeral=True)
+        await self.bot.stop()
         self.bot.logger.warning("RESTARTING BOT!")
         restart_process(context_id(ctx))
 
@@ -89,6 +93,7 @@ class Maintainence(Extension):
         await ctx.send(f"```...\n{last_couple_of_lines}\n```")
 
         await ctx.send("Restarting bot...", ephemeral=True)
+        await self.bot.stop()
         self.bot.logger.warning("RESTARTING BOT FOR NEW UPDATE...")
         restart_process(context_id(ctx))
 

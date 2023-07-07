@@ -19,6 +19,7 @@ from pymongo.errors import DuplicateKeyError
 from comrade.core.augmentations import AugmentedClient
 
 from .cache_mixin import RelayCacheMixin
+from .update_hook import is_valid_update_wh, perform_update
 from .utils import give_filename_extension
 
 
@@ -68,6 +69,12 @@ class Relay(RelayCacheMixin):
         async def relay_msg_callback(event: MessageCreate):
             msg = event.message
             if msg._channel_id == self.relay_channel.id:
+
+                if is_valid_update_wh(msg):
+                    bot.logger.info("[RELAY] received update webhook")
+                    await perform_update(msg, self.bot)
+                    return
+                
                 bot.logger.info(
                     f"[RELAY] received message from {msg.author.username}"
                     f" in {msg.guild.name}: {msg.content}"
