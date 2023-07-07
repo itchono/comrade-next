@@ -1,14 +1,12 @@
+import re
+
+
 def filter_title_text(text: str) -> str:
     """
     Converts the title text from the fully formatted title
     to just the title text.
 
-    The full title text contains text grouped in square brackets and parentheses.
-    The title text is the first group of text not enclosed in
-    square brackets or parentheses.
-
-    Ignore all subsequent groups of text that are not enclosed
-    in square brackets or parentheses.
+    Extracts the first group of text outside of brackets or parentheses.
 
     examples:
     '(C91) [Artist] Title (Group) [English]' -> 'Title'
@@ -29,46 +27,21 @@ def filter_title_text(text: str) -> str:
     ----
     This function is not robust to all cases.
     In the case of an error, the original text is returned.
+
+    This function might also clip certain titles
+    where parentheses or brackets are used in the title.
     """
-    title_text = ""
 
-    opening_braces = ["[", "("]
-    closing_braces = ["]", ")"]
+    match_pattern = re.compile(
+        r"(?:]|\))([^\[\]\(\)]*[^\[\]\(\)\s]+[^\[\]\(\)]*)(?:\(|\[)"
+    )
+    # this pattern matches text between a closing brace and an opening brace,
+    # but only if the text contains at least one non-whitespace character
+    # and exludes braces
 
-    brace_stack = []
-    corr_opening_brace = {b: c for b, c in zip(closing_braces, opening_braces)}
+    # find all matches
+    matches = match_pattern.findall(text)
 
-    try:
-        for c in text:
-            if c in opening_braces:
-                # if c is an opening brace, push it onto the stack
-                brace_stack.append(c)
-
-                # If we already have nontrivial title text, ignore the rest of the text
-                if title_text.strip() != "":
-                    return title_text.strip()
-
-                continue
-
-            elif c in closing_braces:
-                # If c is a closing brace
-
-                if len(brace_stack) == 0:
-                    # closing brace without opening brace,
-                    # silently ignore, but clear title text
-                    title_text = ""
-
-                elif brace_stack[-1] == corr_opening_brace[c]:
-                    brace_stack.pop()
-
-                continue
-
-            elif len(brace_stack) == 0:
-                title_text += c
-
-        return title_text.strip()
-
-    except Exception:
-        # this should not usually
-        # happen, but if it does, return the original text
-        return text
+    # return the first match (after stripping whitespace)
+    # or the original text if no matches were found
+    return next(map(str.strip, matches), text)

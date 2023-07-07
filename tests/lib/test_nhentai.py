@@ -33,14 +33,6 @@ def test_title_parser_nominal(full_title, expected_title):
     assert filter_title_text(full_title) == expected_title
 
 
-def test_title_parser_no_title():
-    assert filter_title_text("[]") == ""
-    assert filter_title_text("[Artist]") == ""
-    assert filter_title_text("[Artist] []") == ""
-    assert filter_title_text("[Artist] ()") == ""
-    assert filter_title_text("[Artist] () []") == ""
-
-
 @pytest.mark.parametrize(
     "full_title, expected_title",
     [
@@ -51,6 +43,13 @@ def test_title_parser_no_title():
             "Imaizumin-chi wa Douyara Gal"
             " no Tamariba ni Natteru Rashii | IMAIZUMI BRINGS "
             "ALL THE GYARUS TO HIS HOUSE",
+        ),
+        (
+            "[Kamukamu! (Nmasse] Otokonoko Fuuzoku de Shinu "
+            "hodo Ikasaretekita | Cumming Hard at the Femboy Brothel "
+            "[English] [Digital]",
+            "Otokonoko Fuuzoku de Shinu "
+            "hodo Ikasaretekita | Cumming Hard at the Femboy Brothel",
         ),
         ("improperly closed]) title [English]", "title"),
         (
@@ -64,6 +63,15 @@ def test_title_parser_difficult_cases(full_title, expected_title):
     Cases where the brackets are not properly closed.
     """
     assert filter_title_text(full_title) == expected_title
+
+
+def test_title_parser_fallback():
+    """
+    Cases where there is not a proper title in the string
+    """
+    bad_title = "(string) (with) (no) (title)"
+
+    assert filter_title_text(bad_title) == bad_title
 
 
 @pytest.mark.online
