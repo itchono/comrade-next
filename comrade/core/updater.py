@@ -46,6 +46,9 @@ def restart_process(notify_channel: int | None = None) -> None:
     Restart the bot with all the same arguments it was launched with,
     except for the notify_channel argument.
 
+    Ensure that the bot's http connection is closed before calling this,
+    otherwise you will run into HTTP 400 errors.
+
     Parameters
     ----------
     notify_channel : int | None
