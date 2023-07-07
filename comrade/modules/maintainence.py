@@ -77,11 +77,13 @@ class Maintainence(Extension):
 
         if current_commit_hash == new_commit_hash:
             await ctx.send(
-                f"No updates have been downloaded, still at commit hash `{current_commit_hash}`"
+                "No updates have been downloaded, "
+                f"still at commit hash `{current_commit_hash}`"
             )
         else:
             await ctx.send(
-                f"Updates have been downloaded: `{current_commit_hash}` -> `{new_commit_hash}`"
+                "Updates have been downloaded: "
+                f"`{current_commit_hash}` -> `{new_commit_hash}`"
             )
 
         # Reinstall the bot package

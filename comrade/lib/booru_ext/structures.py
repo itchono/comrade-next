@@ -7,7 +7,8 @@ from orjson import loads
 
 from comrade.lib.booru_ext.const import OPTIONAL_EMBED_FIELDS
 from comrade.lib.booru_ext.filters import clean_up_post_tag
-from comrade.lib.text_utils import escape_md, text_safe_length
+from comrade.lib.discord_utils.safer_embeds import SafeLengthEmbed
+from comrade.lib.text_utils import escape_md
 
 # Create a type alias that can be any of the booru classes
 BooruType = (
@@ -129,13 +130,13 @@ class BooruSession:
             f"| Post {self.post_id + 1} | Type 'next' to advance"
         )
 
-        embed = Embed(title=text_safe_length(escape_md(self.query), 256))
+        embed = SafeLengthEmbed(title=escape_md(self.query))
         embed.set_image(url=post_data["file_url"])
         embed.set_footer(text=footer_text)
 
         embed.add_field(
             name="Tags",
-            value=text_safe_length(self.post_tags, 1000),
+            value=self.post_tags,
             inline=False,
         )
 

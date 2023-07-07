@@ -69,12 +69,11 @@ class Relay(RelayCacheMixin):
         async def relay_msg_callback(event: MessageCreate):
             msg = event.message
             if msg._channel_id == self.relay_channel.id:
-
                 if is_valid_update_wh(msg):
                     bot.logger.info("[RELAY] received update webhook")
                     await perform_update(msg, self.bot)
                     return
-                
+
                 bot.logger.info(
                     f"[RELAY] received message from {msg.author.username}"
                     f" in {msg.guild.name}: {msg.content}"
@@ -109,7 +108,8 @@ class Relay(RelayCacheMixin):
                 "blob-storage"
             )
             logger.warning(
-                f"Created blob-storage channel in {self.guild.name}, because it did not exist."
+                f"Created blob-storage channel in {self.guild.name},"
+                " because it did not exist."
             )
 
         logger.info(f"[RELAY] all channels initialized in {self.guild.name}")
@@ -160,7 +160,8 @@ class Relay(RelayCacheMixin):
         data : BufferedIOBase
             The data to store in the blob
         mongodb_collection : Collection, optional
-            The MongoDB collection to sync to, by default the one passed to the constructor
+            The MongoDB collection to sync to, by default the one
+            passed to the constructor
         document_data : dict, optional
             Additional fields to store in the MongoDB document, by default {}
         filename : str, optional
@@ -235,7 +236,8 @@ class Relay(RelayCacheMixin):
         source_url : str
             The URL of the blob to mirror
         mongodb_collection : Collection, optional
-            The MongoDB collection to sync to, by default the one passed to the constructor
+            The MongoDB collection to sync to, by default
+            the one passed to the constructor
         mongodb_document_data : dict, optional
             Additional fields to store in the MongoDB document, by default {}
         filename : str, optional
@@ -275,7 +277,8 @@ class Relay(RelayCacheMixin):
         source_url : str
             The source URL of the blob to find (i.e. the external URL)
         mongodb_collection : Collection, optional
-            The MongoDB collection to sync to, by default the one passed to the constructor
+            The MongoDB collection to sync to, by default
+            the one passed to the constructor
 
         Returns
         -------
@@ -316,7 +319,8 @@ class Relay(RelayCacheMixin):
         source_url : str
             The source URL of the blob to delete (i.e. the external URL)
         mongodb_collection : Collection, optional
-            The MongoDB collection to sync to, by default the one passed to the constructor
+            The MongoDB collection to sync to, by default
+            the one passed to the constructor
         keep_message : bool, optional
             Whether to keep the underlying message, by default True
             (because Discord storage is free)

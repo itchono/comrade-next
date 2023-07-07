@@ -2,6 +2,7 @@ import re
 from typing import Awaitable, Callable
 
 from interactions import (
+    SELECT_MAX_NAME_LENGTH,
     ActionRow,
     ComponentContext,
     OptionType,
@@ -60,6 +61,8 @@ class NHSearchHandler(NHGalleryInit):
         query: str,
         sort_order: NHentaiSortOrder = NHentaiSortOrder.POPULAR_ALL_TIME,
     ):
+        await ctx.defer()  # manually defer, to avoid auto-defer causing issues
+
         page = await get_search_page(
             query, 1, self.bot.http_session, sort_order
         )
@@ -156,10 +159,13 @@ class NHSearchHandler(NHGalleryInit):
             options = [
                 StringSelectOption(
                     label=text_safe_length(
-                        f"{num+1+numbering_offset}. {short_title}", 100
+                        f"{num+1+numbering_offset}. {short_title}",
+                        SELECT_MAX_NAME_LENGTH,
                     ),
                     value=str(gid),
-                    description=text_safe_length(f"({gid}) {title_block}", 100),
+                    description=text_safe_length(
+                        f"({gid}) {title_block}", SELECT_MAX_NAME_LENGTH
+                    ),
                 )
                 for num, (gid, short_title, title_block) in enumerate(
                     id_name_iter

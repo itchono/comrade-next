@@ -1,4 +1,5 @@
 from interactions import (
+    SELECT_MAX_NAME_LENGTH,
     BaseContext,
     ComponentContext,
     Embed,
@@ -151,7 +152,7 @@ class RoleManager(Extension):
 
         options = [
             StringSelectOption(
-                label=text_safe_length(role.name, 100),
+                label=text_safe_length(role.name, SELECT_MAX_NAME_LENGTH),
                 value=role.id,
                 description="You already have this role. Click to leave."
                 if role.id in ctx.author._role_ids
