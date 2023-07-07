@@ -1,6 +1,5 @@
-from interactions import Message
+from interactions import Client, Message
 
-from comrade.core.bot_subclass import Comrade
 from comrade.core.updater import (
     get_current_branch,
     get_current_commit_hash,
@@ -32,7 +31,7 @@ def is_valid_update_wh(msg: Message) -> bool:
     return "New tag created:" in msg.embeds[0].title
 
 
-async def perform_update(msg: Message, bot: Comrade) -> None:
+async def perform_update(msg: Message, bot: Client) -> None:
     """
     Performs the update routine
     """
