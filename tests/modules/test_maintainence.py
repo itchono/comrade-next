@@ -12,7 +12,7 @@ async def maintainence_ext(bot: Comrade) -> Maintainence:
     return bot.get_ext("Maintainence")
 
 
-@pytest.skip("Pending being able to run github")
+@pytest.mark.skip("Pending being able to run github")
 async def test_update(
     ctx: BaseContext,
     maintainence_ext: Maintainence,
