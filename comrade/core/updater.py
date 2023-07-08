@@ -27,18 +27,10 @@ def check_updates_on_branch() -> str:
     """
     Returns the result of running git fetch and git status.
     """
-    return (
-        subprocess.run(
-            ["git", "fetch"],
-            capture_output=True,
-            check=True,
-        ).stdout.decode()
-        + subprocess.run(
-            ["git", "status"],
-            capture_output=True,
-            check=True,
-        ).stdout.decode()
-    )
+
+    return subprocess.check_output(
+        ["git", "fetch"], encoding="utf-8"
+    ) + subprocess.check_output(["git", "status"], encoding="utf-8")
 
 
 def restart_process(notify_channel: int | None = None) -> None:
@@ -71,14 +63,13 @@ def update_packages() -> str:
 
     (and returns the output of the command)
     """
-    return subprocess.run(
+    return subprocess.check_output(
         [sys.executable, "-m", "pip", "install", "-e", ".", "--upgrade"],
-        capture_output=True,
-        check=True,
-    ).stdout.decode()
+        encoding="utf-8",
+    )
 
 
-def pull_repo(branch: str = "main") -> None:
+def pull_repo(branch: str = "main") -> str:
     """
     Pulls the latest changes from the git repo
 
@@ -89,7 +80,10 @@ def pull_repo(branch: str = "main") -> None:
 
     """
     current_branch = get_current_branch()
+    ret = ""
     if current_branch != branch:
-        subprocess.run(["git", "checkout", branch], check=True)
+        ret += subprocess.check_output(
+            ["git", "checkout", branch], encoding="utf-8"
+        )
 
-    subprocess.run(["git", "pull"], check=True)
+    return ret + subprocess.check_output(["git", "pull"], encoding="utf-8")

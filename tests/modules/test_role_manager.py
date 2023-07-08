@@ -2,6 +2,7 @@ import pytest
 from interactions import BaseContext, ComponentType, Role
 
 from comrade.core.bot_subclass import Comrade
+from comrade.lib.testing_utils import fetch_latest_message
 from comrade.modules.role_manager import RoleManager
 
 
@@ -31,7 +32,7 @@ async def test_nothing_joinable(ctx: BaseContext, rolemanager_ext: RoleManager):
 
     await roles_cmd.callback(ctx)
 
-    msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    msg = await fetch_latest_message(ctx)
 
     assert msg.content == "There are no joinable roles in this server"
 
@@ -47,7 +48,7 @@ async def test_mark_joinable(
     mark_joinable_cmd = rolemanager_ext.mark_joinable
     await mark_joinable_cmd.callback(ctx, temp_role)
 
-    msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    msg = await fetch_latest_message(ctx)
 
     assert "as joinable" in msg.content
 
@@ -62,7 +63,7 @@ async def test_cannot_double_mark(
     mark_joinable_cmd = rolemanager_ext.mark_joinable
     await mark_joinable_cmd.callback(ctx, temp_role)
 
-    msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    msg = await fetch_latest_message(ctx)
 
     assert "is already joinable" in msg.content
 
@@ -77,7 +78,7 @@ async def test_unmark_joinable(
     unmark_joinable_cmd = rolemanager_ext.unmark_joinable
     await unmark_joinable_cmd.callback(ctx, temp_role)
 
-    msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    msg = await fetch_latest_message(ctx)
 
     assert "as joinable" in msg.content
 
@@ -92,7 +93,7 @@ async def test_cannot_unmark_nonexistent(
     unmark_joinable_cmd = rolemanager_ext.unmark_joinable
     await unmark_joinable_cmd.callback(ctx, temp_role)
 
-    msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    msg = await fetch_latest_message(ctx)
 
     assert "is not joinable" in msg.content
 
@@ -103,7 +104,7 @@ async def test_del_removed_roles_no_op(
 ):
     # first, check that no roles need to be deleted
     await rolemanager_ext.del_removed_roles.callback(ctx)
-    msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    msg = await fetch_latest_message(ctx)
 
     assert msg.content == "No roles to delete"
 
@@ -122,7 +123,7 @@ async def test_del_removed_roles_nominal(
 
     await rolemanager_ext.del_removed_roles.callback(ctx)
 
-    msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    msg = await fetch_latest_message(ctx)
 
     assert "removed roles" in msg.content
 
@@ -141,7 +142,7 @@ async def test_role_menu(
 
     await roles_cmd.callback(ctx)
 
-    msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    msg = await fetch_latest_message(ctx)
 
     assert msg.components[0].type == ComponentType.ACTION_ROW
     assert msg.components[0].components[0].type == ComponentType.STRING_SELECT

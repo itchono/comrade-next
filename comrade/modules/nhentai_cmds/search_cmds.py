@@ -61,8 +61,7 @@ class NHSearchHandler(NHGalleryInit):
         query: str,
         sort_order: NHentaiSortOrder,
     ):
-        if isinstance(ctx, SlashContext):
-            await ctx.defer()  # manually defer, to avoid auto-defer causing issues
+        await ctx.defer()  # manually defer, to avoid auto-defer causing issues
 
         page = await get_search_page(
             query, 1, self.bot.http_session, sort_order

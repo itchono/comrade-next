@@ -1,6 +1,7 @@
 import pytest
 from interactions import BaseContext
 
+from comrade.lib.testing_utils import fetch_latest_message
 from comrade.modules.telemetry import Telemetry
 
 
@@ -11,5 +12,5 @@ async def test_status_cmd(ctx: BaseContext):
     await telemetry_ext.status.callback(ctx)
 
     # Get latest message in channel
-    embed_msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    embed_msg = await fetch_latest_message(ctx)
     assert embed_msg.embeds[0].title == "Bot Status"

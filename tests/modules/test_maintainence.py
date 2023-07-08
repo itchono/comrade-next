@@ -1,9 +1,11 @@
 import os
+import subprocess
 
 import pytest
 from interactions import BaseContext
 
 from comrade.core.bot_subclass import Comrade
+from comrade.lib.testing_utils import fake_subproc_check_output
 from comrade.modules.maintainence import Maintainence
 
 
@@ -12,7 +14,7 @@ async def maintainence_ext(bot: Comrade) -> Maintainence:
     return bot.get_ext("Maintainence")
 
 
-@pytest.mark.skip("Pending being able to run github")
+@pytest.mark.bot
 async def test_update(
     ctx: BaseContext,
     maintainence_ext: Maintainence,
@@ -31,6 +33,7 @@ async def test_update(
             stored_args.append(args)
 
         m.setattr(os, "execv", mock_execv)
+        m.setattr(subprocess, "check_output", fake_subproc_check_output)
 
         await update_cmd.callback(ctx)
 

@@ -1,8 +1,10 @@
 # Taken from interactions.py tests folder
-from typing import Optional
+import asyncio
+from typing import Callable, Optional
 
 import discord_typings
-from interactions import Client, Message, Snowflake_Type
+from interactions import BaseContext, Client, Message, Snowflake_Type
+from interactions.api.events import MessageCreate
 from interactions.ext.prefixed_commands import PrefixedContext
 from interactions.models.internal.context import InteractionContext
 
@@ -88,6 +90,85 @@ def generate_dummy_context(
         guild_id=guild_id,
     )
 
-    return PrefixedContext.from_message(
+    ctx = PrefixedContext.from_message(
         client, Message.from_dict(message, client)
     )
+
+    # Monkeypatch a .defer coroutine to the context
+    async def defer():
+        pass
+
+    ctx.defer = defer
+
+    return ctx
+
+
+async def fetch_latest_message(ctx: BaseContext) -> Message:
+    """Fetch the latest message in the channel."""
+    return (await ctx.channel.fetch_messages(limit=1))[0]
+
+
+async def wait_for_message_or_fetch(
+    ctx: BaseContext,
+    check: Callable[[MessageCreate], bool],
+    timeout: Optional[float] = 8,
+) -> Message:
+    """
+    Wait for a message to be sent in the channel, or fetch the last message
+    if it has already been sent.
+
+    Useful for testing commands that send messages.
+
+    Parameters
+    ----------
+    ctx : BaseContext
+        The context to wait for a message in
+    check : Callable[[MessageCreate], bool]
+        The check to use for the wait_for
+    timeout : Optional[float]
+        The timeout for the wait_for, defaults to 8 seconds
+        set it longer to allow for slow CI (ratelimits)
+
+    Returns
+    -------
+    Message
+        The message that was sent
+    """
+    try:
+        # Wait for bot to send message
+        msg_event: MessageCreate = await ctx.bot.wait_for(
+            "message_create", checks=check, timeout=timeout
+        )
+        return msg_event.message
+    except asyncio.TimeoutError:
+        # If the bot has already sent the message and we couldn't see the event
+        # fetch the latest message
+        return await fetch_latest_message(ctx)
+
+
+def fake_subproc_check_output(*args, **kwargs) -> str:
+    """
+    Monkeypatched subprocess.check, used to spoof output
+    from git and pip commands.
+    """
+    ex_args = args[0]
+
+    match ex_args:
+        case ["git", "branch", "--show-current"]:
+            return "main"
+        case ["git", "rev-parse", "--short", "HEAD"]:
+            return "1234567"
+        case ["git", "fetch"]:
+            return ""
+        case ["git", "pull"]:
+            return "Already up to date."
+        case ["git", "status"]:
+            return (
+                "On branch main\nYour branch is up to date "
+                "with 'origin/main'.\n\nnothing to commit, working tree clean"
+            )
+        case [*_, "-m", "pip", "install", "-e", ".", "--upgrade"]:
+            return "Successfully installed comrade"
+
+        case _:
+            return ""

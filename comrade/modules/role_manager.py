@@ -27,7 +27,7 @@ class RoleManager(Extension):
     @slash_command(
         name="rolemanager",
         description="Manage roles",
-        sub_cmd_name="mark_joinable",
+        sub_cmd_name="mark",
         sub_cmd_description="Mark a role as joinable",
         dm_permission=False,
     )
@@ -70,7 +70,7 @@ class RoleManager(Extension):
     @slash_command(
         name="rolemanager",
         description="Manage roles",
-        sub_cmd_name="unmark_joinable",
+        sub_cmd_name="unmark",
         sub_cmd_description="Unmark a role as joinable",
         dm_permission=False,
     )
@@ -107,7 +107,7 @@ class RoleManager(Extension):
     @slash_command(
         name="rolemanager",
         description="Manage roles",
-        sub_cmd_name="del_removed",
+        sub_cmd_name="clean",
         sub_cmd_description="Deletes roles no longer in the server",
         dm_permission=False,
     )
@@ -148,7 +148,9 @@ class RoleManager(Extension):
         """
         joinable_roles = self.bot.db.roles.find({"guild_id": ctx.guild.id})
 
-        roles = [ctx.guild.get_role(role["_id"]) for role in joinable_roles]
+        roles = [
+            ctx.guild.get_role(role["_id"]) for role in joinable_roles if role
+        ]
 
         options = [
             StringSelectOption(
