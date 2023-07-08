@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 
-from pytest import MonkeyPatch
+import pytest
 
 from comrade.core.updater import (
     check_updates_on_branch,
@@ -14,35 +14,35 @@ from comrade.core.updater import (
 from comrade.lib.testing_utils import fake_subproc_check_output
 
 
-def test_get_curr_branch(monkeypatch: MonkeyPatch):
+def test_get_curr_branch(monkeypatch: pytest.MonkeyPatch):
     with monkeypatch.context() as m:
         m.setattr(subprocess, "check_output", fake_subproc_check_output)
 
         assert get_current_branch() == "main"
 
 
-def test_get_curr_commit_hash(monkeypatch: MonkeyPatch):
+def test_get_curr_commit_hash(monkeypatch: pytest.MonkeyPatch):
     with monkeypatch.context() as m:
         m.setattr(subprocess, "check_output", fake_subproc_check_output)
 
         assert get_current_commit_hash() == "1234567"
 
 
-def test_check_updates_on_branch(monkeypatch: MonkeyPatch):
+def test_check_updates_on_branch(monkeypatch: pytest.MonkeyPatch):
     with monkeypatch.context() as m:
         m.setattr(subprocess, "check_output", fake_subproc_check_output)
 
         assert "up to date" in check_updates_on_branch()
 
 
-def test_update_packages(monkeypatch: MonkeyPatch):
+def test_update_packages(monkeypatch: pytest.MonkeyPatch):
     with monkeypatch.context() as m:
         m.setattr(subprocess, "check_output", fake_subproc_check_output)
 
         assert "installed comrade" in update_packages()
 
 
-def test_restarter(monkeypatch: MonkeyPatch):
+def test_restarter(monkeypatch: pytest.MonkeyPatch):
     """
     Make sure the restarter correctly
     adds args to the argv

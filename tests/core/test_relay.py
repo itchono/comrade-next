@@ -1,12 +1,17 @@
 import asyncio
 import logging
+import os
+import subprocess
+from types import SimpleNamespace
 
 import pytest
-from interactions import Guild, logger_name
+from interactions import Guild, GuildText, logger_name
 from pymongo.database import Database
 
 from comrade.core.bot_subclass import Comrade
 from comrade.core.relay_system import Relay
+from comrade.core.relay_system.update_hook import perform_update
+from comrade.lib.testing_utils import fake_subproc_check_output
 
 
 @pytest.mark.bot
@@ -68,3 +73,34 @@ async def test_relay_init(
 
     # Check cache has deleted the blob
     assert source_url not in relay.local_cache
+
+
+@pytest.mark.bot
+async def test_update_hook_perform_update(
+    monkeypatch: pytest.MonkeyPatch, bot: Comrade, channel: GuildText
+):
+    """
+    Check that the update hook works
+    """
+    stored_args = []
+
+    dummy_msg = SimpleNamespace()
+
+    with monkeypatch.context() as m:
+
+        def mock_execv(*args, **kwargs):
+            stored_args.append(args)
+
+        async def bot_stop():
+            pass
+
+        m.setattr(os, "execv", mock_execv)
+        m.setattr(subprocess, "check_output", fake_subproc_check_output)
+
+        # IMPORTANT: PREVENT THE BOT FROM ACTUALLY STOPPING
+        m.setattr(bot, "stop", bot_stop)
+        m.setattr(dummy_msg, "channel", channel, raising=False)
+
+        await perform_update(dummy_msg, bot)
+
+        assert "--notify_channel" in stored_args[0][1]
