@@ -10,7 +10,8 @@ from comrade.lib.nhentai.page_parser import (
 )
 from comrade.lib.nhentai.search import get_gallery_page, get_search_page
 from comrade.lib.nhentai.structures import (
-    NoGalleryFoundError,
+    NHentaiGallerySession,
+    NoPageFoundError,
     NoSearchResultsError,
 )
 from comrade.lib.nhentai.text_filters import filter_title_text
@@ -111,6 +112,23 @@ async def test_gallery_acquisition_nominal(
     assert gallery.title_block_tags
     assert gallery.start_embed
 
+    # Create a session and verify that it is valid
+    session = NHentaiGallerySession(gallery, 0)
+    assert session.current_page_idx == -1
+    assert (
+        session.current_page_url
+        == "https://t.nhentai.net/galleries/1019423/cover.jpg"
+    )
+    assert session.current_page_filename == "185217_page_cover.jpg"
+
+    assert session.advance_page()
+    assert session.current_page_idx == 0
+    assert (
+        session.current_page_url
+        == "https://i3.nhentai.net/galleries/1019423/1.jpg"
+    )
+    assert session.current_page_filename == "185217_page_1.jpg"
+
 
 @pytest.mark.online
 async def test_not_present_anywhere(http_session: aiohttp.ClientSession):
@@ -119,7 +137,7 @@ async def test_not_present_anywhere(http_session: aiohttp.ClientSession):
     """
     gallery_id = -1
 
-    with pytest.raises(NoGalleryFoundError):
+    with pytest.raises(NoPageFoundError):
         await get_gallery_page(gallery_id, http_session)
 
 
@@ -158,29 +176,10 @@ async def test_gallery_not_on_nhentai_to(http_session: aiohttp.ClientSession):
 
 
 @pytest.mark.online
-async def test_search_nominal_1(http_session: aiohttp.ClientSession):
-    search_query = "alp love live english kurosawa"
-
-    page = await get_search_page(search_query, 1, http_session)
-
-    search_result = parse_search_result_from_page(page)
-    num_pages = parse_maximum_search_pages(page)
-
-    assert 388445 in search_result.gallery_ids
-    assert num_pages == 1
-
-    # access all @property to ensure that they are not broken
-    assert search_result.short_titles
-    assert search_result.title_blocks
-
-
-@pytest.mark.online
 @pytest.mark.parametrize(
     "query", ("school swimsuit", "imaizumin", "yuzuki n dash english")
 )
-async def test_search_nominal_additional(
-    http_session: aiohttp.ClientSession, query: str
-):
+async def test_search_nominal(http_session: aiohttp.ClientSession, query: str):
     """
     Based on user cases that resulted in bugs previously
     """
@@ -189,6 +188,27 @@ async def test_search_nominal_additional(
     assert num_pages > 0
 
     search_result = parse_search_result_from_page(page)
+
+    # access all @property to ensure that they are not broken
+    assert search_result.short_titles
+    assert search_result.title_blocks
+
+
+@pytest.mark.online
+async def test_search_last_page(http_session: aiohttp.ClientSession):
+    """
+    Tests that the last page of a search query is parsed correctly
+
+    As of writing, this query should return 8 pages
+    """
+    search_query = "alp love live"
+
+    first_page = await get_search_page(search_query, 1, http_session)
+
+    num_pages = parse_maximum_search_pages(first_page)
+
+    last_page = await get_search_page(search_query, num_pages, http_session)
+    search_result = parse_search_result_from_page(last_page)
 
     # access all @property to ensure that they are not broken
     assert search_result.short_titles

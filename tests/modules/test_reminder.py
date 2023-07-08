@@ -4,6 +4,10 @@ from interactions.api.events import MessageCreate
 from interactions.ext.prefixed_commands import PrefixedContext
 
 from comrade.core.configuration import TEST_GUILD_ID
+from comrade.lib.testing_utils import (
+    fetch_latest_message,
+    wait_for_message_or_fetch,
+)
 
 
 @pytest.mark.bot
@@ -20,10 +24,10 @@ async def test_reminder_from_slash(ctx: BaseContext):
 
     await reminder_slash_cmd.callback(
         replyable_ctx, "in 3 seconds", "test reminder"
-    )
+    )  # the wait duration might need to change according to ratelimits during testing
 
     # Check that confirmation message was sent
-    reminder_confirmation_msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    reminder_confirmation_msg = await fetch_latest_message(ctx)
     assert reminder_confirmation_msg.content.startswith(
         "Reminder registered to send"
     )
@@ -31,12 +35,7 @@ async def test_reminder_from_slash(ctx: BaseContext):
     def check(m: MessageCreate):
         return m.message._author_id == ctx.bot.user.id and m.message.embeds
 
-    # Wait for bot to send reminder message
-    reminder_msg_event: MessageCreate = await ctx.bot.wait_for(
-        "message_create", checks=check, timeout=5
-    )
-    # Get latest message in channel
-    reminder_embed_msg = reminder_msg_event.message
+    reminder_embed_msg = await wait_for_message_or_fetch(ctx, check, timeout=5)
     embed = reminder_embed_msg.embeds[0]
     assert embed.description == "test reminder"
     assert embed.author.name == f"Reminder for {ctx.author.username}"

@@ -77,20 +77,14 @@ class NHentaiGallerySession:
 
     Attributes
     ----------
-    user_id : int
-        The user ID of the session owner.
     gallery : NHentaiGallery
         The gallery to use for the session.
     page_number : int
         The page number the session is on.
-    spoiler_imgs : bool
-        Whether or not to use spoiler images.
     """
 
-    user_id: int
     gallery: NHentaiGallery
     current_page_number: int = 0
-    spoiler_imgs: bool = False
 
     def is_valid_page_number(self, page: int) -> bool:
         """
@@ -232,8 +226,6 @@ class NHentaiSearchSession:
 
     Attributes
     ----------
-    user_id : int
-        The user ID of the session owner.
     query : str
         The query to use for the session. (e.g. english, translated, etc.)
     results_pages : dict[int, NHentaiSearchResult]
@@ -242,13 +234,12 @@ class NHentaiSearchSession:
         The maximum number of pages available in the query
     """
 
-    user_id: int
     query: str
     results_pages: dict[int, NHentaiSearchResult]
     maximum_pages: int
 
 
-class NoGalleryFoundError(Exception):
+class NoPageFoundError(Exception):
     pass
 
 

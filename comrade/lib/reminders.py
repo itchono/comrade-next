@@ -87,8 +87,7 @@ class Reminder:
         # we can use that message.
         # Otherwise, we don't have a jump URL.
         if isinstance(ctx, ContextMenuContext):
-            channel = await ctx.bot.fetch_channel(ctx.channel_id)
-            message = await channel.fetch_message(ctx.target_id)
+            message = ctx.target
             jump_url = message.jump_url
 
         elif isinstance(ctx, PrefixedContext):

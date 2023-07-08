@@ -27,7 +27,7 @@ class RoleManager(Extension):
     @slash_command(
         name="rolemanager",
         description="Manage roles",
-        sub_cmd_name="mark_joinable",
+        sub_cmd_name="mark",
         sub_cmd_description="Mark a role as joinable",
         dm_permission=False,
     )
@@ -70,7 +70,7 @@ class RoleManager(Extension):
     @slash_command(
         name="rolemanager",
         description="Manage roles",
-        sub_cmd_name="unmark_joinable",
+        sub_cmd_name="unmark",
         sub_cmd_description="Unmark a role as joinable",
         dm_permission=False,
     )
@@ -107,7 +107,7 @@ class RoleManager(Extension):
     @slash_command(
         name="rolemanager",
         description="Manage roles",
-        sub_cmd_name="del_removed",
+        sub_cmd_name="clean",
         sub_cmd_description="Deletes roles no longer in the server",
         dm_permission=False,
     )

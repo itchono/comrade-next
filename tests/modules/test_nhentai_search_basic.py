@@ -6,6 +6,8 @@ from interactions import (
 )
 
 from comrade.core.bot_subclass import Comrade
+from comrade.lib.nhentai.structures import NHentaiSortOrder
+from comrade.lib.testing_utils import wait_for_message_or_fetch
 from comrade.modules.nhentai_cmds import NHentai
 
 
@@ -25,9 +27,13 @@ async def test_search_start(ctx: BaseContext, nhentai_ext: NHentai):
     """
     nhentai_search_cmd = nhentai_ext.nhentai_search
 
-    await nhentai_search_cmd.callback(ctx, "alp love live english kurosawa")
+    await nhentai_search_cmd.callback(
+        ctx, "alp love live english kurosawa", NHentaiSortOrder.POPULAR_ALL_TIME
+    )
 
-    start_msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    start_msg = await wait_for_message_or_fetch(
+        ctx, lambda m: m.message.components
+    )
 
     assert start_msg.content == "Select a gallery to view (Page 1 / 1)"
 
@@ -56,7 +62,9 @@ async def test_search_click(
         m.setattr(ctx, "values", ["388445"], raising=False)
         await nhentai_ext.nhentai_search_callback.callback(ctx)
 
-    start_embed_msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    start_embed_msg = await wait_for_message_or_fetch(
+        ctx, lambda m: m.message.embeds
+    )
     assert (
         start_embed_msg.content
         == "Type `np` (or click the buttons) to start reading, and advance pages."

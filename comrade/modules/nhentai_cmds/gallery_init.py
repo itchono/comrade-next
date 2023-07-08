@@ -20,7 +20,6 @@ class NHGalleryInit(NHCacher):
         self,
         ctx: SlashContext,
         gallery_id: int,
-        spoiler_imgs: bool = False,
         send_embed: bool = True,
     ):
         """
@@ -32,17 +31,13 @@ class NHGalleryInit(NHCacher):
             The SlashContext object
         gallery_id: int
             The gallery ID, aka the 6 digits
-        spoiler_imgs: bool
-            Whether or not to send images with spoilers
         send_embed: bool
             Whether or not to send the start embed
         """
         page = await get_gallery_page(gallery_id, self.bot.http_session)
         nh_gallery = parse_gallery_from_page(page)
 
-        session = NHentaiGallerySession(
-            ctx.author_id, nh_gallery, spoiler_imgs=spoiler_imgs
-        )
+        session = NHentaiGallerySession(nh_gallery)
         self.gallery_sessions[ctx] = session
 
         if not send_embed:

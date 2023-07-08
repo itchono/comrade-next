@@ -1,4 +1,4 @@
-from .commands_main import NHentai
+from .extension_main import NHentai
 
 
 def setup(bot):

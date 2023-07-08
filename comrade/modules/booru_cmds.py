@@ -68,6 +68,12 @@ class Booru(Extension):
             The tags to search for.
         """
         booru_obj = BOORUS[booru_name](self.bot.http_session)
+
+        # Temporary workaround: sort override
+        # If "order:" or "sort:" are in the tags, override the sort_random to be False
+        if "order:" in tags or "sort:" in tags:
+            sort_random = False
+
         booru_session = BooruSession(booru_obj, tags, sort_random)
 
         # Try to initialize the posts list

@@ -4,6 +4,8 @@ import pytest
 from interactions import BaseContext, Button, ComponentType, StringSelectMenu
 
 from comrade.core.bot_subclass import Comrade
+from comrade.lib.nhentai.structures import NHentaiSortOrder
+from comrade.lib.testing_utils import fetch_latest_message
 from comrade.modules.nhentai_cmds import NHentai
 
 
@@ -23,9 +25,11 @@ async def test_search_start(ctx: BaseContext, nhentai_ext: NHentai):
     """
     nhentai_search_cmd = nhentai_ext.nhentai_search
 
-    await nhentai_search_cmd.callback(ctx, "alp love live")
+    await nhentai_search_cmd.callback(
+        ctx, "alp love live", NHentaiSortOrder.POPULAR_ALL_TIME
+    )
 
-    start_msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    start_msg = await fetch_latest_message(ctx)
 
     assert start_msg.content == "Select a gallery to view (Page 1 / 8)"
 
@@ -49,7 +53,7 @@ async def test_search_next_page(
     We need to do some low-level bot hacking to get the event dispatcher
     to call the callback directly.
     """
-    menu_msg_old = (await ctx.channel.fetch_messages(limit=1))[0]
+    menu_msg_old = await fetch_latest_message(ctx)
     action_row = menu_msg_old.components[1]
     page_2_button: Button = action_row.components[1]
 
@@ -70,7 +74,7 @@ async def test_search_next_page(
         m.setattr(ctx, "edit_origin", edit_message_patch, raising=False)
         await callback(ctx)
 
-    menu_msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    menu_msg = await fetch_latest_message(ctx)
 
     assert menu_msg.content == "Select a gallery to view (Page 2 / 8)"
 
@@ -85,7 +89,7 @@ async def test_search_last_page(
     We need to do some low-level bot hacking to get the event dispatcher
     to call the callback directly.
     """
-    menu_msg_old = (await ctx.channel.fetch_messages(limit=1))[0]
+    menu_msg_old = await fetch_latest_message(ctx)
     action_row = menu_msg_old.components[1]
     last_page_button: Button = action_row.components[-1]
 
@@ -106,7 +110,7 @@ async def test_search_last_page(
         m.setattr(ctx, "edit_origin", edit_message_patch, raising=False)
         await callback(ctx)
 
-    menu_msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    menu_msg = await fetch_latest_message(ctx)
 
     assert menu_msg.content == "Select a gallery to view (Page 8 / 8)"
 
@@ -120,7 +124,7 @@ async def test_same_page(
 
     The bot should handle this gracefully, and print a message
     """
-    menu_msg_old = (await ctx.channel.fetch_messages(limit=1))[0]
+    menu_msg_old = await fetch_latest_message(ctx)
     action_row = menu_msg_old.components[1]
     last_page_button: Button = action_row.components[-1]
 
@@ -142,5 +146,5 @@ async def test_same_page(
         m.setattr(ctx, "edit_origin", edit_message_patch, raising=False)
         await callback(ctx)
 
-    menu_msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    menu_msg = await fetch_latest_message(ctx)
     assert menu_msg.content == "You're already on that page!"

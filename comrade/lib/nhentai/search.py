@@ -10,7 +10,7 @@ from comrade.lib.nhentai.page_parser import (
 from comrade.lib.nhentai.structures import (
     NHentaiSortOrder,
     NHentaiWebPage,
-    NoGalleryFoundError,
+    NoPageFoundError,
 )
 from comrade.lib.nhentai.urls import ORDERED_PROXIES
 
@@ -54,7 +54,7 @@ async def get_gallery_page(
         if is_valid_gallery_soup(soup):
             return NHentaiWebPage(name, soup)
 
-    raise NoGalleryFoundError("No valid proxies found")
+    raise NoPageFoundError("No valid proxies found")
 
 
 async def get_search_page(
@@ -89,34 +89,28 @@ async def get_search_page(
     # e.g. "alp love live" -> "alp+love+live"
     encoded_search_query = quote_plus(search_query)
 
-    for name, proxy_url_base in ORDERED_PROXIES.items():
-        # SPECIAL CASES, SHOULD FIND A WAY TO GENERALIZE THIS
-        # Skip nhentai.to because it has fewer available galleries
-        if name == "nhentai.to Mirror":
-            continue
-        # If it's google translate, encode the plus signs again
-        if name == "Google Translate Proxy":
-            encoded_search_query = quote(encoded_search_query)
-            ampersand = quote("&")
-        else:
-            ampersand = "&"
+    # Currently, only the Google Translate Proxy is useful for searches
+    proxy_name = "Google Translate Proxy"
+    proxy_url_base = ORDERED_PROXIES[proxy_name]
 
-        # Construct the URL to the gallery
-        # e.g. nhentai.net/search/?q=alp+love+live
-        req_url = (
-            f"{proxy_url_base}/search/?q={encoded_search_query}"
-            f"{ampersand}page={pagenum}"
-            f"{ampersand}{sort_order.value}"
-        )
+    # url-encode everything to make it compatible with Google Translate
+    encoded_search_query = quote(encoded_search_query)
+    ampersand = quote("&")
 
-        async with http_session.get(req_url) as response:
-            html = await response.text()
+    # Construct the URL to the gallery
+    # e.g. nhentai.net/search/?q=alp+love+live
+    req_url = (
+        f"{proxy_url_base}/search/?q={encoded_search_query}"
+        f"{ampersand}page={pagenum}"
+        f"{ampersand}{sort_order.value}"
+    )
 
-        soup = bs4.BeautifulSoup(
-            html, "lxml"
-        )  # lxml is faster than html.parser
+    async with http_session.get(req_url) as response:
+        html = await response.text()
 
-        if is_valid_search_soup(soup):
-            return NHentaiWebPage(name, soup)
+    soup = bs4.BeautifulSoup(html, "lxml")  # lxml is faster than html.parser
 
-    raise NoGalleryFoundError("No valid proxies found")
+    if is_valid_search_soup(soup):
+        return NHentaiWebPage(proxy_name, soup)
+
+    raise NoPageFoundError("Could not get a valid search page")

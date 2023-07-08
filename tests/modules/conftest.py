@@ -6,10 +6,10 @@ from interactions import Client, GuildText
 from interactions.ext import prefixed_commands
 
 from comrade.core.configuration import TEST_GUILD_ID
-from comrade.lib.discord_utils import generate_dummy_context
+from comrade.lib.testing_utils import generate_dummy_context
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 async def ctx(
     bot: Client, channel: GuildText
 ) -> prefixed_commands.PrefixedContext:

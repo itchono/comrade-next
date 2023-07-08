@@ -3,6 +3,10 @@ from interactions import BaseContext
 from interactions.api.events import MessageCreate
 
 from comrade.core.bot_subclass import Comrade
+from comrade.lib.testing_utils import (
+    fetch_latest_message,
+    wait_for_message_or_fetch,
+)
 from comrade.modules.nhentai_cmds import NHentai
 
 
@@ -18,7 +22,7 @@ async def test_gallery_start(ctx: BaseContext, nhentai_ext: NHentai):
     await nhentai_gallery_cmd.callback(ctx, 266745)
 
     # Get latest message in channel
-    start_embed_msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    start_embed_msg = await fetch_latest_message(ctx)
     assert (
         start_embed_msg.content
         == "Type `np` (or click the buttons) to start reading, and advance pages."
@@ -41,12 +45,12 @@ async def test_gallery_next_page_from_init(ctx: BaseContext):
     """
     await ctx.send("np")
 
-    msg_event: MessageCreate = await ctx.bot.wait_for(
-        "message_create",
-        checks=lambda e: e.message.author == ctx.author and e.message.embeds,
-        timeout=10,
-    )
-    embed = msg_event.message.embeds[0]
+    def check(m: MessageCreate):
+        return m.message.author == ctx.bot.user and m.message.embeds
+
+    msg = await wait_for_message_or_fetch(ctx, check, timeout=10)
+
+    embed = msg.embeds[0]
 
     assert (
         embed.footer.text
@@ -65,18 +69,21 @@ async def test_gallery_end(ctx: BaseContext, nhentai_ext: NHentai):
     """
     await ctx.send("np")
 
-    msg_event: MessageCreate = await ctx.bot.wait_for(
-        "message_create",
-        checks=lambda e: e.message.author == ctx.author,
-        timeout=10,
-    )
+    def check(m: MessageCreate):
+        return (
+            m.message.author == ctx.bot.user
+            and not m.message.embeds
+            and m.message.content != "np"
+        )
 
-    assert msg_event.message.content == "You have reached the end of this work."
+    msg = await wait_for_message_or_fetch(ctx, check, timeout=10)
+
+    assert msg.content == "You have reached the end of this work."
 
     # Now try to go to next page, make sure it doesn't work
     await nhentai_ext.nhentai_np_callback.callback(ctx)
 
-    msg = (await ctx.channel.fetch_messages(limit=1))[0]
+    msg = await fetch_latest_message(ctx)
 
     assert (
         msg.content
