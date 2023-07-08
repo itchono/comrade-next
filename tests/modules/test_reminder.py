@@ -19,8 +19,8 @@ async def test_reminder_from_slash(ctx: BaseContext):
     ]["remind"]
 
     await reminder_slash_cmd.callback(
-        replyable_ctx, "in 3 seconds", "test reminder"
-    )
+        replyable_ctx, "in 8 seconds", "test reminder"
+    )  # the wait duration might need to change according to ratelimits during testing
 
     # Check that confirmation message was sent
     reminder_confirmation_msg = (await ctx.channel.fetch_messages(limit=1))[0]
@@ -33,7 +33,7 @@ async def test_reminder_from_slash(ctx: BaseContext):
 
     # Wait for bot to send reminder message
     reminder_msg_event: MessageCreate = await ctx.bot.wait_for(
-        "message_create", checks=check, timeout=5
+        "message_create", checks=check, timeout=10
     )
     # Get latest message in channel
     reminder_embed_msg = reminder_msg_event.message
