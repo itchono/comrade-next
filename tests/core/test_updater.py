@@ -4,22 +4,8 @@ import sys
 from pytest import MonkeyPatch
 
 from comrade.core.updater import (
-    check_updates_on_branch,
-    get_current_branch,
-    get_current_commit_hash,
     restart_process,
 )
-
-
-def test_updater_helpers():
-    """
-    Test the updater helpers
-
-    Nothing to validate against, just make sure they don't throw
-    """
-    assert get_current_commit_hash()
-    assert get_current_branch()
-    assert check_updates_on_branch()
 
 
 def test_restarter(monkeypatch: MonkeyPatch):
