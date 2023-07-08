@@ -14,10 +14,6 @@ async def maintainence_ext(bot: Comrade) -> Maintainence:
     return bot.get_ext("Maintainence")
 
 
-# These tests need to run at the end of the test suite
-# because they do weird things to the bot process
-
-
 @pytest.mark.bot
 async def test_update(
     ctx: BaseContext,
@@ -36,8 +32,14 @@ async def test_update(
         def mock_execv(*args, **kwargs):
             stored_args.append(args)
 
+        async def bot_stop():
+            pass
+
         m.setattr(os, "execv", mock_execv)
         m.setattr(subprocess, "check_output", fake_subproc_check_output)
+
+        # IMPORTANT: PREVENT THE BOT FROM ACTUALLY STOPPING
+        m.setattr(ctx.bot, "stop", bot_stop)
 
         await update_cmd.callback(ctx)
 
