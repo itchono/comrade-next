@@ -148,9 +148,7 @@ class RoleManager(Extension):
         """
         joinable_roles = self.bot.db.roles.find({"guild_id": ctx.guild.id})
 
-        roles = [
-            ctx.guild.get_role(role["_id"]) for role in joinable_roles if role
-        ]
+        roles = [ctx.guild.get_role(role["_id"]) for role in joinable_roles]
 
         options = [
             StringSelectOption(

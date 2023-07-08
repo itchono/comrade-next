@@ -111,7 +111,7 @@ async def fetch_latest_message(ctx: BaseContext) -> Message:
 async def wait_for_message_or_fetch(
     ctx: BaseContext,
     check: Callable[[MessageCreate], bool],
-    timeout: Optional[float] = 8,
+    timeout: Optional[float] = 5,
 ) -> Message:
     """
     Wait for a message to be sent in the channel, or fetch the last message
@@ -126,7 +126,7 @@ async def wait_for_message_or_fetch(
     check : Callable[[MessageCreate], bool]
         The check to use for the wait_for
     timeout : Optional[float]
-        The timeout for the wait_for, defaults to 8 seconds
+        The timeout for the wait_for, defaults to 5 seconds
         set it longer to allow for slow CI (ratelimits)
 
     Returns
