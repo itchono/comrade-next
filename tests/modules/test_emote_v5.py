@@ -24,7 +24,7 @@ async def test_sending_emote(ctx: BaseContext, emote: str):
         )
         emoji_msg = msg_event.message
     except asyncio.TimeoutError:
-        emoji_msg = await ctx.channel.fetch_messages(limit=1)[0]
+        emoji_msg = (await ctx.channel.fetch_messages(limit=1))[0]
 
     assert (
         emoji_msg.content
@@ -46,7 +46,7 @@ async def test_no_emote(ctx: BaseContext):
         )
         error_msg = msg_event.message
     except asyncio.TimeoutError:
-        error_msg = await ctx.channel.fetch_messages(limit=1)[0]
+        error_msg = (await ctx.channel.fetch_messages(limit=1))[0]
 
     error_msg = msg_event.message
     embed = error_msg.embeds[0]

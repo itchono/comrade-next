@@ -4,6 +4,7 @@ import pytest
 from interactions import BaseContext, Button, ComponentType, StringSelectMenu
 
 from comrade.core.bot_subclass import Comrade
+from comrade.lib.nhentai.structures import NHentaiSortOrder
 from comrade.modules.nhentai_cmds import NHentai
 
 
@@ -23,7 +24,9 @@ async def test_search_start(ctx: BaseContext, nhentai_ext: NHentai):
     """
     nhentai_search_cmd = nhentai_ext.nhentai_search
 
-    await nhentai_search_cmd.callback(ctx, "alp love live")
+    await nhentai_search_cmd.callback(
+        ctx, "alp love live", NHentaiSortOrder.POPULAR_ALL_TIME
+    )
 
     start_msg = (await ctx.channel.fetch_messages(limit=1))[0]
 

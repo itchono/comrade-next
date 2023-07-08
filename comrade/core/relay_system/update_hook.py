@@ -41,11 +41,13 @@ async def perform_update(msg: Message, bot: Client) -> None:
 
     if current_commit_hash == new_commit_hash:
         await msg.channel.send(
-            f"No updates have been downloaded, still at commit hash `{current_commit_hash}`"
+            "No updates have been downloaded, "
+            f"still at commit hash `{current_commit_hash}`"
         )
     else:
         await msg.channel.send(
-            f"Updates have been downloaded: `{current_commit_hash}` -> `{new_commit_hash}`"
+            "Updates have been downloaded: "
+            f"`{current_commit_hash}` -> `{new_commit_hash}`"
         )
 
     # Reinstall the bot package

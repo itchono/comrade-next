@@ -47,8 +47,8 @@ class NHSearchHandler(NHGalleryInit):
     )
     @slash_option(
         name="sort_order",
-        description="The sort order of the search results (default: Popular All Time)",
-        required=False,
+        description="The sort order of the search results",
+        required=True,
         opt_type=OptionType.STRING,
         choices=[
             SlashCommandChoice(name=e.pretty_name, value=e.value)
@@ -59,9 +59,10 @@ class NHSearchHandler(NHGalleryInit):
         self,
         ctx: SlashContext,
         query: str,
-        sort_order: NHentaiSortOrder = NHentaiSortOrder.POPULAR_ALL_TIME,
+        sort_order: NHentaiSortOrder,
     ):
-        await ctx.defer()  # manually defer, to avoid auto-defer causing issues
+        if isinstance(ctx, SlashContext):
+            await ctx.defer()  # manually defer, to avoid auto-defer causing issues
 
         page = await get_search_page(
             query, 1, self.bot.http_session, sort_order
@@ -75,7 +76,6 @@ class NHSearchHandler(NHGalleryInit):
         maximum_num_pages = parse_maximum_search_pages(page)
 
         nh_search_session = NHentaiSearchSession(
-            ctx.author_id,
             query,
             {1: nh_search_result},
             maximum_num_pages,
