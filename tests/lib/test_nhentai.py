@@ -113,13 +113,21 @@ async def test_gallery_acquisition_nominal(
     assert gallery.start_embed
 
     # Create a session and verify that it is valid
-    session = NHentaiGallerySession(gallery)
+    session = NHentaiGallerySession(gallery, 0)
+    assert session.current_page_idx == -1
+    assert (
+        session.current_page_url
+        == "https://t.nhentai.net/galleries/1019423/cover.jpg"
+    )
+    assert session.current_page_filename == "185217_page_cover.jpg"
+
+    assert session.advance_page()
     assert session.current_page_idx == 0
     assert (
         session.current_page_url
-        == "https://i3.nhentai.net/galleries/1019423/cover.jpg"
+        == "https://i3.nhentai.net/galleries/1019423/1.jpg"
     )
-    assert session.current_page_filename == "cover.jpg"
+    assert session.current_page_filename == "185217_page_1.jpg"
 
 
 @pytest.mark.online
