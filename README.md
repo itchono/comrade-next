@@ -1,11 +1,23 @@
-# Comrade NEXT
-
-[![Test Python package](https://github.com/itchono/comrade-next/actions/workflows/ci-pytest.yml/badge.svg)](https://github.com/itchono/comrade-next/actions/workflows/ci-pytest.yml)
-[![codecov](https://codecov.io/gh/itchono/comrade-next/branch/main/graph/badge.svg?token=3DW5YRS91J)](https://codecov.io/gh/itchono/comrade-next)
-
+<div align="center">
+    
 ![comrade-next-logo](https://user-images.githubusercontent.com/54449457/239707605-5ffae413-a8e7-4f3d-84b9-6100f053b61b.png)
 
-The next rewrite of my personal Discord bot, using [`interactions.py`](https://github.com/interactions-py/interactions.py)
+![Discord Bot](https://badgen.net/badge/icon/Discord%20Bot?icon=discord&label=Comrade%20NEXT)
+[![GitHub tag](https://img.shields.io/github/tag/itchono/comrade-next.svg)](https://github.com/itchono/comrade-next/tags)
+![Python 3.11](https://img.shields.io/badge/Python-3.11+-1081c1?logo=python)
+![Code Style: Black](https://img.shields.io/badge/Code%20Style-black-000000.svg)
+
+[![Automated Tests](https://github.com/itchono/comrade-next/actions/workflows/ci-pytest.yml/badge.svg)](https://github.com/itchono/comrade-next/actions/workflows/ci-pytest.yml)
+![CICD](https://badgen.net/badge/icon/Passing?icon=github&label=CI%2FCD)
+[![codecov](https://codecov.io/gh/itchono/comrade-next/branch/main/graph/badge.svg?token=3DW5YRS91J)](https://codecov.io/gh/itchono/comrade-next)
+
+---
+
+# Comrade NEXT: The Next Great Leap for Comrade
+
+</div>
+
+A complete rewrite of [Comrade](https://github.com/itchono/Comrade), using [`interactions.py`](https://github.com/interactions-py/interactions.py).
 
 The goal of this bot is to become a long-term maintainable bot that I can use for the next several years. It will represent the culmination of nearly 4 years of work on my original version of Comrade which started in 2019.
 
@@ -30,7 +42,7 @@ Suggest improvements by creating [an issue](https://github.com/itchono/comrade-n
 * Python 3.11+
 * Discord Bot Token
 * MongoDB cluster that you can connect to (either local or Atlas)
-* Spare Discord server for asset storage
+* Spare Discord server for asset storage and as a communication relay
 
 ## Procedure
 
@@ -54,3 +66,19 @@ Suggest improvements by creating [an issue](https://github.com/itchono/comrade-n
 See `comrade/core/configuration.py` for details on the required values.
 
 6. Run `comrade`
+
+# System Architecture
+```mermaid
+graph TD
+    servers(((Discord Servers)))
+    hostcomp(Host Computer with Comrade)
+    mongo{{MongoDB Database}}
+    relay{{Relay Server}}
+    gh{{GitHub Repo, CI, CD}}
+    gh -->|CD Webhook| relay
+    gh -->|Pull Repo| hostcomp
+    relay --> |Webhook-based Commands| hostcomp
+    hostcomp --- |Asset Storage & Retrieval| relay
+    hostcomp --- |Document Storage & Retrieval| mongo
+    hostcomp --- |Bot Commands| servers
+```
