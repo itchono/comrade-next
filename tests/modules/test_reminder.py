@@ -23,7 +23,7 @@ async def test_reminder_from_slash(ctx: BaseContext):
     ]["remind"]
 
     await reminder_slash_cmd.callback(
-        replyable_ctx, "in 8 seconds", "test reminder"
+        replyable_ctx, "in 3 seconds", "test reminder"
     )  # the wait duration might need to change according to ratelimits during testing
 
     # Check that confirmation message was sent
@@ -35,7 +35,7 @@ async def test_reminder_from_slash(ctx: BaseContext):
     def check(m: MessageCreate):
         return m.message._author_id == ctx.bot.user.id and m.message.embeds
 
-    reminder_embed_msg = await wait_for_message_or_fetch(ctx, check, timeout=10)
+    reminder_embed_msg = await wait_for_message_or_fetch(ctx, check, timeout=5)
     embed = reminder_embed_msg.embeds[0]
     assert embed.description == "test reminder"
     assert embed.author.name == f"Reminder for {ctx.author.username}"

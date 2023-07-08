@@ -14,6 +14,10 @@ async def maintainence_ext(bot: Comrade) -> Maintainence:
     return bot.get_ext("Maintainence")
 
 
+# These tests need to run at the end of the test suite
+# because they do weird things to the bot process
+
+
 @pytest.mark.bot
 async def test_update(
     ctx: BaseContext,

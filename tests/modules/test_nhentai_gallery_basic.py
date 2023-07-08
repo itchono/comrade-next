@@ -48,7 +48,7 @@ async def test_gallery_next_page_from_init(ctx: BaseContext):
     def check(m: MessageCreate):
         return m.message.author == ctx.bot.user and m.message.embeds
 
-    msg = await wait_for_message_or_fetch(ctx, check)
+    msg = await wait_for_message_or_fetch(ctx, check, timeout=10)
 
     embed = msg.embeds[0]
 
@@ -76,7 +76,7 @@ async def test_gallery_end(ctx: BaseContext, nhentai_ext: NHentai):
             and m.message.content != "np"
         )
 
-    msg = await wait_for_message_or_fetch(ctx, check)
+    msg = await wait_for_message_or_fetch(ctx, check, timeout=10)
 
     assert msg.content == "You have reached the end of this work."
 

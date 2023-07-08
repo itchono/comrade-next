@@ -17,7 +17,7 @@ async def test_sending_emote(ctx: BaseContext, emote: str):
     def check(m: MessageCreate):
         return m.message.webhook_id is not None
 
-    emoji_msg = await wait_for_message_or_fetch(ctx, check)
+    emoji_msg = await wait_for_message_or_fetch(ctx, check, timeout=10)
 
     assert (
         emoji_msg.content
