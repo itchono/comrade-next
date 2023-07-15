@@ -2,7 +2,6 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone, tzinfo
 
 from bson import ObjectId
-from dateutil.tz import tzlocal
 from interactions import (
     BaseContext,
     ContextMenuContext,
@@ -147,7 +146,9 @@ class Reminder:
         Used for setting up the reminder task in interactions.py
         (which only accepts naive datetimes)
         """
-        return self.scheduled_time.astimezone(tzlocal()).replace(tzinfo=None)
+        local_tz = datetime.now().astimezone().tzinfo
+
+        return self.scheduled_time.astimezone(local_tz).replace(tzinfo=None)
 
     @property
     def reply_id(self) -> int | None:
