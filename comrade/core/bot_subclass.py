@@ -27,7 +27,6 @@ class Comrade(
     - MongoDB connection
     - Configuration store
     - aiohttp ClientSession
-    - uptime as Arrow type
 
     Overrides
     ---------
@@ -93,16 +92,16 @@ class Comrade(
 
     @listen(disable_default_listeners=True)
     async def on_command_completion(self, *args, **kwargs):
-        pass
+        ...
 
     @listen(disable_default_listeners=True)
     async def on_component_completion(self, *args, **kwargs):
-        pass
+        ...
 
     @listen(disable_default_listeners=True)
     async def on_autocomplete_completion(self, *args, **kwargs):
-        pass
+        ...
 
     @listen(disable_default_listeners=True)
     async def on_modal_completion(self, *args, **kwargs):
-        pass
+        ...

@@ -1,25 +1,13 @@
-"""
-Context menu and command to set reminders.
-"""
+from bson import ObjectId
 from interactions import (
-    CommandType,
-    ContextMenuContext,
+    Button,
+    ButtonStyle,
     DateTrigger,
     Embed,
-    Extension,
     InteractionContext,
-    Modal,
-    ModalContext,
-    OptionType,
-    ShortText,
-    SlashContext,
     Task,
-    context_menu,
     listen,
-    slash_command,
-    slash_option,
 )
-from interactions.ext.prefixed_commands import PrefixedContext, prefixed_command
 
 from comrade.core.bot_subclass import Comrade
 from comrade.core.configuration import ACCENT_COLOUR
@@ -27,14 +15,26 @@ from comrade.lib.discord_utils import messageable_from_context_id
 from comrade.lib.reminders import Reminder
 
 
-class Reminders(Extension):
+class RemindersBackend:
+    """
+    Nuts and bolts used to implement reminders.
+    """
+
     bot: Comrade
+    reminder_tasks: dict[ObjectId, Task] = {}  # reminder ID -> task
 
     def clean_up_reminder(self, reminder: Reminder):
         """
-        Clean up a reminder after it has been sent.
+        Clean up a reminder after it has been sent, or
+        requested to be deleted.
         Deletes the reminder from the database.
         """
+        # Try to cancel the task if it exists
+        if reminder._id in self.reminder_tasks:
+            self.reminder_tasks[reminder._id].stop()
+            del self.reminder_tasks[reminder._id]
+
+        # Clean up the reminder from the database
         deletion_result = self.bot.db.remindersV7.delete_one(
             {"_id": reminder._id}
         )
@@ -68,10 +68,10 @@ class Reminders(Extension):
             The task generated from the reminder.
             Use Task.start() to start the task.
         """
+
         # Infer the channel in which to send the reminder
         # from the context ID of the reminder
-
-        @Task.create(trigger=DateTrigger(reminder.scheduled_time))
+        @Task.create(trigger=DateTrigger(reminder.naive_scheduled_time))
         async def send_reminder():
             sendable = await messageable_from_context_id(
                 reminder.context_id, self.bot
@@ -88,7 +88,7 @@ class Reminders(Extension):
                 author = await self.bot.fetch_member(
                     reminder.author_id, reminder.guild_id
                 )
-                author_name = author.nick if author.nick else author.username
+                author_name = author.display_name
             else:
                 author = await self.bot.fetch_user(reminder.author_id)
                 author_name = author.username
@@ -112,8 +112,6 @@ class Reminders(Extension):
                 url=reminder.jump_url,
                 icon_url=author.avatar.url,
             )
-            embed.set_footer(text="Reminder originally set")
-
             content = author.mention
 
             if reminder.jump_url:
@@ -153,13 +151,11 @@ class Reminders(Extension):
         or if the time is in the past.
         """
         try:
-            reminder = await Reminder.from_relative_time_and_ctx(
-                relative_time, ctx, reminder_note
+            reminder = Reminder.from_relative_time_and_ctx(
+                relative_time, ctx, self.bot.tz, reminder_note
             )
         except ValueError as e:
-            await ctx.send(
-                f"Invalid input `{relative_time}`: {e}", ephemeral=True
-            )
+            await ctx.send(str(e), ephemeral=True)
             return None
 
         insertion_result = self.bot.db.remindersV7.insert_one(
@@ -174,103 +170,10 @@ class Reminders(Extension):
 
         reminder._id = insertion_result.inserted_id
 
-        send_reminder = await self.task_from_reminder(reminder)
-        send_reminder.start()
-
+        reminder_task = await self.task_from_reminder(reminder)
+        reminder_task.start()
+        self.reminder_tasks[reminder._id] = reminder_task
         return reminder
-
-    @context_menu(name="Create Reminder", context_type=CommandType.MESSAGE)
-    async def reminder_ctx_menu(self, menu_ctx: ContextMenuContext):
-        modal = Modal(
-            ShortText(
-                label="Relative Time",
-                placeholder="e.g. in 5 seconds",
-                required=True,
-                custom_id="relative_time",
-            ),
-            ShortText(
-                label="Reminder Note",
-                placeholder="e.g. Submit paper",
-                required=True,
-                custom_id="reminder_note",
-            ),
-            title="Create Reminder",
-        )
-
-        await menu_ctx.send_modal(modal)
-
-        modal_ctx: ModalContext = await menu_ctx.bot.wait_for_modal(modal)
-
-        reminder = await self.create_reminder(
-            menu_ctx,
-            modal_ctx.responses["relative_time"],
-            modal_ctx.responses["reminder_note"],
-        )
-
-        if reminder is None:
-            await modal_ctx.send("Reminder creation failed.")
-            return
-
-        await modal_ctx.send(
-            f"Reminder registered to send {reminder.timestamp.format('R')}"
-            f" ({reminder.timestamp.format('F')}).",
-        )
-
-    @slash_command(
-        name="remind",
-        description="Set a reminder at a given time in the future.",
-    )
-    @slash_option(
-        name="relative_time",
-        description="The relative time to send the reminder at, e.g. 'in 5 seconds' or 'in 2 hours'.",
-        required=True,
-        opt_type=OptionType.STRING,
-    )
-    @slash_option(
-        name="reminder_note",
-        description="The note to send with the reminder.",
-        required=True,
-        opt_type=OptionType.STRING,
-    )
-    async def reminder_slash_cmd(
-        self, ctx: SlashContext, relative_time: str, reminder_note: str
-    ):
-        reminder = await self.create_reminder(ctx, relative_time, reminder_note)
-
-        if reminder is None:
-            return
-
-        await ctx.send(
-            f"Reminder registered to send {reminder.timestamp.format('R')}"
-            f" ({reminder.timestamp.format('F')}).",
-        )
-
-    @prefixed_command(
-        name="remind", help="Set a reminder at a given time in the future."
-    )
-    async def reminder_prefixed_cmd(
-        self, ctx: PrefixedContext, relative_time: str, reminder_note: str
-    ):
-        """
-        Set a reminder at a given time in the future.
-
-        Parameters
-        ----------
-        relative_time : str
-            The relative time to send the reminder at,
-            e.g. "in 5 seconds" or "in 2 hours".
-        reminder_note : str
-            The note to send with the reminder.
-        """
-
-        reminder = await self.create_reminder(ctx, relative_time, reminder_note)
-
-        if reminder is None:
-            return
-
-        await ctx.send(
-            f"Reminder registered to send {reminder.timestamp.format('R')} ({reminder.timestamp.format('F')})."
-        )
 
     @listen("on_ready")
     async def init_existing_reminders(self):
@@ -287,10 +190,22 @@ class Reminders(Extension):
         for reminder_dict in reminder_dicts:
             reminder = Reminder.from_dict(reminder_dict)
             send_reminder = await self.task_from_reminder(reminder)
-            send_reminder.start()
+            # Handle reminders which expired while the bot was offline
+            if reminder.expired:
+                self.bot.logger.warning(
+                    f"Reminder {reminder._id} expired at "
+                    f"{reminder.scheduled_time}, executing now."
+                )
+                await send_reminder.callback()
+            else:
+                send_reminder.start()
+                self.reminder_tasks[reminder._id] = send_reminder
 
         self.bot.logger.info("Started all reminders.")
 
-
-def setup(bot):
-    Reminders(bot)
+    def del_reminder_button(self, _id: ObjectId) -> Button:
+        return Button(
+            style=ButtonStyle.DANGER,
+            label="Delete Reminder",
+            custom_id=f"del_reminder:{_id}",
+        )

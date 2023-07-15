@@ -92,7 +92,7 @@ class NHSearchHandler(NHGalleryInit):
 
         await paginator.send(ctx)
 
-    @component_callback(re.compile(r"nhentai_search_(\d+)"))
+    @component_callback(re.compile(r"nhentai_search:(\d+)"))
     async def nhentai_search_callback(self, ctx: ComponentContext):
         """
         Handles selection callback for the StringSelectMenu in
@@ -174,7 +174,7 @@ class NHSearchHandler(NHGalleryInit):
             # Give the user a menu to select from
             menu = StringSelectMenu(
                 options,
-                custom_id=f"nhentai_search_{context_id}",
+                custom_id=f"nhentai_search:{context_id}",
                 placeholder=f"Select a gallery from page {page_num}",
             )
 

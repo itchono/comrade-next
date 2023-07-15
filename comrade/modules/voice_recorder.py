@@ -1,7 +1,7 @@
 import asyncio
+from datetime import datetime
 from io import BytesIO
 
-from arrow import now
 from interactions import (
     Extension,
     File,
@@ -53,8 +53,8 @@ class VoiceRecorder(Extension):
         audio.export(io_obj, format="mp3")
         io_obj.seek(0)
 
-        recording_timestamp = now(self.bot.timezone).format(
-            "YYYY-MM-DD_HH-mm-ss"
+        recording_timestamp = datetime.now(tz=self.bot.tz).strftime(
+            "%Y-%m-%d_%H-%M-%S"
         )
 
         await ctx.send(

@@ -1,7 +1,13 @@
 from platform import python_version
 
-import arrow
-from interactions import Embed, Extension, File, SlashContext, slash_command
+from interactions import (
+    Embed,
+    Extension,
+    File,
+    SlashContext,
+    TimestampStyles,
+    slash_command,
+)
 from interactions.client.const import __version__ as __interactions_version__
 
 from comrade._version import __version__ as __comrade_version__
@@ -20,11 +26,14 @@ class Telemetry(Extension):
             name=self.bot.user.username, icon_url=self.bot.user.avatar.url
         )
 
+        last_restart_str = (
+            f"{self.bot.start_timestamp.format(TimestampStyles.RelativeTime)}\n"
+            f"at {self.bot.start_timestamp.format(TimestampStyles.ShortDateTime)}"
+        )
+
         embed.add_field(
-            name="Uptime",
-            value=arrow.now(self.bot.timezone).humanize(
-                self.bot.start_time, only_distance=True
-            ),
+            name="Last Restart",
+            value=last_restart_str,
             inline=True,
         )
 

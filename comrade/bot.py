@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 from interactions import logger_name
-from interactions.ext import prefixed_commands
+from interactions.ext import hybrid_commands, prefixed_commands
 
 from comrade.core.bot_subclass import Comrade
 from comrade.core.configuration import ACCENT_COLOUR, BOT_TOKEN, DEV_MODE
@@ -51,6 +51,7 @@ def main(args: list[str] = None, test_mode: bool = False) -> Comrade:
     bot = Comrade(notify_on_restart=args.notify_channel)
 
     prefixed_commands.setup(bot)
+    hybrid_commands.setup(bot)
     # Load all extensions in the comrade/modules directory
     for module in Path(__file__).parent.glob("modules/*"):
         # Skip all dunder files
