@@ -32,6 +32,10 @@ async def test_gallery_start(ctx: BaseContext, nhentai_ext: NHentai):
 
     assert start_embed.title == "Upload duplicate, replace with white page"
     assert start_embed.url == "https://nhentai.net/g/266745/"
+    assert (
+        start_embed.image.url
+        == "https://t.nhentai.net/galleries/1385285/cover.jpg"
+    )
     assert start_embed.footer.text == "Found using nhentai.to Mirror"
 
 
@@ -56,8 +60,7 @@ async def test_gallery_next_page_from_init(ctx: BaseContext):
         embed.footer.text
         == "Page 1 of 1 | Upload duplicate, replace with white page (266745)"
     )
-    # assert embed.image.url is not None
-    # bugged, pending interactions.py fix
+    assert embed.image.url is not None
 
 
 @pytest.mark.bot

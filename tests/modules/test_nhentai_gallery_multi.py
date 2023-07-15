@@ -32,6 +32,10 @@ async def test_gallery_start(ctx: BaseContext, nhentai_ext: NHentai):
 
     assert start_embed.title == "R.E.I.N.A"
     assert start_embed.url == "https://nhentai.net/g/185217/"
+    assert (
+        start_embed.image.url
+        == "https://t.nhentai.net/galleries/1019423/cover.jpg"
+    )
     assert start_embed.footer.text == "Found using nhentai.to Mirror"
 
 
@@ -51,8 +55,7 @@ async def test_gallery_next_page_from_init(
     embed = embed_msg.embeds[0]
 
     assert embed.footer.text == "Page 1 of 28 | R.E.I.N.A (185217)"
-    # assert embed.image.url is not None
-    # bugged, pending interactions.py fix
+    assert embed.image.url is not None
 
 
 @pytest.mark.bot
@@ -85,8 +88,7 @@ async def test_gallery_next_page_from_first(
     embed = embed_msg.embeds[0]
 
     assert embed.footer.text == "Page 2 of 28 | R.E.I.N.A (185217)"
-    # assert embed.image.url is not None
-    # bugged, pending interactions.py fix
+    assert embed.image.url is not None
 
 
 @pytest.mark.bot
@@ -102,8 +104,7 @@ async def test_gallery_jump_page_nominal(
     embed = embed_msg.embeds[0]
 
     assert embed.footer.text == "Page 10 of 28 | R.E.I.N.A (185217)"
-    # assert embed.image.url is not None
-    # bugged, pending interactions.py fix
+    assert embed.image.url is not None
 
 
 @pytest.mark.bot
@@ -137,8 +138,7 @@ async def test_gallery_prev_page_from_middle(
     embed = embed_msg.embeds[0]
 
     assert embed.footer.text == "Page 14 of 28 | R.E.I.N.A (185217)"
-    # assert embed.image.url is not None
-    # bugged, pending interactions.py fix
+    assert embed.image.url is not None
 
 
 @pytest.mark.bot
@@ -158,8 +158,7 @@ async def test_gallery_prev_page_from_end(
     embed = embed_msg.embeds[0]
 
     assert embed.footer.text == "Page 27 of 28 | R.E.I.N.A (185217)"
-    # assert embed.image.url is not None
-    # bugged, pending interactions.py fix
+    assert embed.image.url is not None
 
 
 @pytest.mark.bot
