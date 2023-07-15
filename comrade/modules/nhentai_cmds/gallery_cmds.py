@@ -21,21 +21,21 @@ class NHGalleryHandler(NHPageHandler):
         nsfw=True,
     )
     @slash_option(
-        name="id",
+        name="gallery_id",
         description="Gallery number, aka the 6 digits",
         required=True,
         opt_type=OptionType.INTEGER,
     )
-    async def nhentai_gallery(self, ctx: SlashContext, _id: int):
+    async def nhentai_gallery(self, ctx: SlashContext, gallery_id: int):
         """
         Retrieve an nhentai gallery.
 
         Parameters
         ----------
-        _id: int
+        gallery_id: int
             The gallery ID, aka the 6 digits
         """
-        await self.init_gallery_session(ctx, _id)
+        await self.init_gallery_session(ctx, gallery_id)
 
     @slash_command(
         name="nhentai",
