@@ -17,10 +17,10 @@ from pymongo.collection import Collection
 from pymongo.errors import DuplicateKeyError
 
 from comrade.core.augmentations import AugmentedClient
+from comrade.lib.file_utils import give_filename_extension
 
 from .cache_mixin import RelayCacheMixin
 from .update_hook import is_valid_update_wh, perform_update
-from .utils import give_filename_extension
 
 
 class Relay(RelayCacheMixin):
