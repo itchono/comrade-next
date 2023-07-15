@@ -1,10 +1,15 @@
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone, tzinfo
 
-from arrow import Arrow
 from bson import ObjectId
-from interactions import BaseContext, ContextMenuContext, Timestamp
+from interactions import (
+    BaseContext,
+    ContextMenuContext,
+    Timestamp,
+)
+from interactions.ext.hybrid_commands import HybridContext
 from interactions.ext.prefixed_commands import PrefixedContext
+from timelength import TimeLength
 
 from comrade.lib.discord_utils import context_id
 
@@ -18,10 +23,10 @@ class Reminder:
 
     Attributes
     ----------
-    time_utc : datetime
-        The (local) time at which the reminder should be sent.
+    scheduled_time : datetime
+        TZ aware datetime at which the reminder is scheduled for sending
     created_at : datetime
-        The (local) time at which the reminder was created.
+        TZ aware datetime at which the reminder was created
     context_id : int
         The ID of the context in which the reminder was created,
         either the channel ID of the text channel in which the
@@ -57,29 +62,38 @@ class Reminder:
         """
         Create a Reminder from a MongoDB document.
         """
-        return cls(**data)
+        reminder = cls(**data)
+
+        # if the datetimes are naive, make them aware (UTC)
+        if reminder.scheduled_time.tzinfo is None:
+            reminder.scheduled_time = reminder.scheduled_time.replace(
+                tzinfo=timezone.utc
+            )
+        if reminder.created_at.tzinfo is None:
+            reminder.created_at = reminder.created_at.replace(
+                tzinfo=timezone.utc
+            )
+        return reminder
 
     @classmethod
-    async def from_relative_time_and_ctx(
+    def from_relative_time_and_ctx(
         cls,
         relative_time: str,
         ctx: BaseContext,
+        tz: tzinfo,
         note: str = None,
     ):
         """
         Create a Reminder from a relative time string.
         """
-        # Convert the relative time to an Arrow time
-        # This will automatically raise a ValueError if the time is invalid
-        time_from_now = Arrow.dehumanize(Arrow.now(), relative_time)
+        # Parse relative time
+        offset = TimeLength(relative_time)
+        delta = timedelta(seconds=offset.total_seconds)
 
-        # Check that the time is in the future
-        if time_from_now < Arrow.now():
-            past_timestamp = Timestamp.fromdatetime(time_from_now.naive)
-            raise ValueError(
-                "Reminder must be in the future. Your reminder "
-                f"would have occurred at {past_timestamp.format('F')}."
-            )
+        scheduled_time = datetime.now(tz=tz) + delta
+
+        if not delta:
+            raise ValueError(f"Could not parse relative time `{relative_time}`")
 
         # If the reminder was invoked from a context menu,
         # use the original message's jump URL
@@ -90,6 +104,9 @@ class Reminder:
             message = ctx.target
             jump_url = message.jump_url
 
+        elif isinstance(ctx, HybridContext) and ctx._message:
+            jump_url = ctx._message.jump_url
+
         elif isinstance(ctx, PrefixedContext):
             jump_url = ctx._message.jump_url
 
@@ -97,8 +114,8 @@ class Reminder:
             jump_url = None
 
         return cls(
-            scheduled_time=time_from_now.naive,
-            created_at=Arrow.now().naive,
+            scheduled_time=scheduled_time,
+            created_at=datetime.now(tz=tz),
             context_id=context_id(ctx),
             author_id=ctx.author_id,
             guild_id=ctx.guild_id,
@@ -111,7 +128,7 @@ class Reminder:
         """
         Whether the reminder has expired.
         """
-        return self.scheduled_time < datetime.utcnow()
+        return self.scheduled_time < datetime.now(tz=timezone.utc)
 
     @property
     def timestamp(self) -> Timestamp:
@@ -119,6 +136,19 @@ class Reminder:
         The timestamp of the reminder.
         """
         return Timestamp.fromdatetime(self.scheduled_time)
+
+    @property
+    def naive_scheduled_time(self) -> datetime:
+        """
+        The scheduled time of the reminder, without timezone information,
+        localized to the system's timezone.
+
+        Used for setting up the reminder task in interactions.py
+        (which only accepts naive datetimes)
+        """
+        local_tz = datetime.now().astimezone().tzinfo
+
+        return self.scheduled_time.astimezone(local_tz).replace(tzinfo=None)
 
     @property
     def reply_id(self) -> int | None:

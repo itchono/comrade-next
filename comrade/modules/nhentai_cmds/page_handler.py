@@ -1,8 +1,8 @@
 import asyncio
 from collections import deque
 from enum import Enum
+from time import perf_counter
 
-import arrow
 from interactions import (
     ComponentContext,
     component_callback,
@@ -30,7 +30,7 @@ class PrefetchStrategy(Enum):
 
 class NHPageHandler(NHGalleryInit):
     # store the last 100 page response times
-    page_response_times = deque(maxlen=100)
+    page_response_times: deque[float] = deque(maxlen=100)
 
     async def send_current_gallery_page(
         self,
@@ -53,7 +53,7 @@ class NHPageHandler(NHGalleryInit):
 
         """
         # Metrics
-        start_time = arrow.utcnow()
+        start_time = perf_counter()
 
         # Cache
         blob_url = await self.bot.relay.find_blob_by_url(
@@ -78,8 +78,8 @@ class NHPageHandler(NHGalleryInit):
         )
 
         # Metrics
-        end_time = arrow.utcnow()
-        self.page_response_times.append((end_time - start_time).total_seconds())
+        end_time = perf_counter()
+        self.page_response_times.append(end_time - start_time)
 
         # Cache images
         if prefetch_strategy == PrefetchStrategy.LOOKAHEAD:

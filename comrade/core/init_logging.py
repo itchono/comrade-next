@@ -1,10 +1,10 @@
 # Taken from https://github.com/NAFTeam/Bot-Template
 import logging
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
-
-import arrow
+from zoneinfo import ZoneInfo
 
 from comrade.core.configuration import TIMEZONE
 
@@ -16,16 +16,14 @@ class CustomLogger:
         # Time format: YYYY-MM-DD HH:MM:SS <timezone>
         # Logger format: [TIME] [LEVEL]: MESSAGE
 
-        timezone = TIMEZONE
-
         self.formatter = logging.Formatter(
-            "[%(asctime)s " + timezone + "] [%(levelname)s]: %(message)s",
+            "[%(asctime)s " + TIMEZONE + "] [%(levelname)s]: %(message)s",
             "%Y-%m-%d %H:%M:%S",
         )
 
         def time_convert(*_) -> time.struct_time:
             # Convert time to tz specified in .env
-            current_time = arrow.utcnow().to(timezone)
+            current_time = datetime.now(tz=ZoneInfo(TIMEZONE))
             return current_time.timetuple()
 
         self.formatter.converter = time_convert

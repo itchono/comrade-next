@@ -1,8 +1,8 @@
+from datetime import timezone
 from zoneinfo import ZoneInfo
 
-import arrow
 from aiohttp import ClientSession
-from interactions import Client
+from interactions import Client, Timestamp
 from pymongo.database import Database
 
 from comrade.core.configuration import (
@@ -21,24 +21,19 @@ class AugmentedClient(Client):
     - MongoDB connection
     - Configuration store
     - aiohttp ClientSession
-    - uptime as Arrow type
     """
 
     db: Database
-    timezone: str = TIMEZONE
+    tz: timezone = ZoneInfo(TIMEZONE)
     notify_on_restart: int = 0  # Channel ID to notify on restart
     http_session: ClientSession
 
     @property
-    def start_time(self) -> arrow.Arrow:
+    def start_timestamp(self) -> Timestamp | None:
         """
-        The start time of the bot, as an Arrow instance.
-
-        Timezone is set to the bot's timezone.
+        Returns a timestamp object for the time
+        the bot was started.
         """
-        if not (st := self._connection_state.start_time):
-            return arrow.now(self.timezone)
-
-        # ensure that st is localized to our timezone (because it defaults to whatever
-        # the system timezone is)
-        return arrow.Arrow.fromdatetime(st.astimezone(ZoneInfo(self.timezone)))
+        if not self.start_time:
+            return None
+        return Timestamp.fromdatetime(self.start_time)
