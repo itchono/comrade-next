@@ -1,5 +1,5 @@
 import pytest
-from interactions import BaseContext, InteractionCommand
+from interactions import InteractionCommand
 from interactions.api.events import MessageCreate
 from interactions.ext.prefixed_commands import PrefixedContext
 
@@ -11,7 +11,7 @@ from comrade.lib.testing_utils import (
 
 
 @pytest.mark.bot
-async def test_reminder_from_slash(ctx: BaseContext):
+async def test_reminder_from_slash(ctx: PrefixedContext):
     # We need to create a message to reply to in the context, so this is the workaround.
     msg_to_reply = await ctx.send("Reply to this message with a reminder.")
     replyable_ctx = PrefixedContext.from_message(ctx.bot, msg_to_reply)

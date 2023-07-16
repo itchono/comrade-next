@@ -2,12 +2,11 @@ import os
 import subprocess
 
 import pytest
-from interactions import BaseContext
 
 from comrade.core.comrade_client import Comrade
 from comrade.lib.testing_utils import (
+    CapturingContext,
     fake_subproc_check_output,
-    fetch_latest_message,
 )
 from comrade.modules.maintainence import Maintainence
 
@@ -19,7 +18,7 @@ async def maintainence_ext(bot: Comrade) -> Maintainence:
 
 @pytest.mark.bot
 async def test_restart(
-    ctx: BaseContext,
+    capturing_ctx: CapturingContext,
     maintainence_ext: Maintainence,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -42,16 +41,16 @@ async def test_restart(
         m.setattr(subprocess, "check_output", fake_subproc_check_output)
 
         # IMPORTANT: PREVENT THE BOT FROM ACTUALLY STOPPING
-        m.setattr(ctx.bot, "stop", bot_stop)
+        m.setattr(capturing_ctx.bot, "stop", bot_stop)
 
-        await restart_cmd.callback(ctx)
+        await restart_cmd.callback(capturing_ctx)
 
         assert "--notify_channel" in stored_args[0][1]
 
 
 @pytest.mark.bot
 async def test_check_updates(
-    ctx: BaseContext,
+    capturing_ctx: CapturingContext,
     maintainence_ext: Maintainence,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -70,15 +69,15 @@ async def test_check_updates(
         m.setattr(os, "execv", mock_execv)
         m.setattr(subprocess, "check_output", fake_subproc_check_output)
 
-        await check_cmd.callback(ctx)
+        await check_cmd.callback(capturing_ctx)
 
-        msg = await fetch_latest_message(ctx)
+        msg = capturing_ctx.testing_captured_message
         assert "No updates available." in msg.content
 
 
 @pytest.mark.bot
 async def test_install_updates(
-    ctx: BaseContext,
+    capturing_ctx: CapturingContext,
     maintainence_ext: Maintainence,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -101,8 +100,8 @@ async def test_install_updates(
         m.setattr(subprocess, "check_output", fake_subproc_check_output)
 
         # IMPORTANT: PREVENT THE BOT FROM ACTUALLY STOPPING
-        m.setattr(ctx.bot, "stop", bot_stop)
+        m.setattr(capturing_ctx.bot, "stop", bot_stop)
 
-        await update_cmd.callback(ctx)
+        await update_cmd.callback(capturing_ctx)
 
         assert "--notify_channel" in stored_args[0][1]

@@ -1,9 +1,8 @@
 import pytest
-from interactions import BaseContext
 
 from comrade.core.comrade_client import Comrade
 from comrade.lib.testing_utils import (
-    fetch_latest_message,
+    CapturingContext,
 )
 from comrade.modules.helpful_converters import HelpfulConverters
 
@@ -15,22 +14,22 @@ async def converters_ext(bot: Comrade) -> HelpfulConverters:
 
 @pytest.mark.bot
 async def test_tenor_nominal(
-    ctx: BaseContext,
+    capturing_ctx: CapturingContext,
     converters_ext: HelpfulConverters,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    tenor_msg = await ctx.send(
+    tenor_msg = await capturing_ctx.send(
         "https://tenor.com/view/kotori-kotori-itsuka-itsuka-kotori-gif-23001734"
     )
 
     context_cmd = converters_ext.convert_to_gif_url
 
     with monkeypatch.context() as m:
-        m.setattr(ctx, "target", tenor_msg, raising=False)
+        m.setattr(capturing_ctx, "target", tenor_msg, raising=False)
 
-        await context_cmd.callback(ctx)
+        await context_cmd.callback(capturing_ctx)
 
-    gif_msg = await fetch_latest_message(ctx)
+    gif_msg = capturing_ctx.testing_captured_message
 
     assert (
         gif_msg.embeds[0].description
@@ -40,19 +39,19 @@ async def test_tenor_nominal(
 
 @pytest.mark.bot
 async def test_tenor_invalid(
-    ctx: BaseContext,
+    capturing_ctx: CapturingContext,
     converters_ext: HelpfulConverters,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    tenor_msg = await ctx.send("not-a-tenor-link")
+    tenor_msg = await capturing_ctx.send("not-a-tenor-link")
 
     context_cmd = converters_ext.convert_to_gif_url
 
     with monkeypatch.context() as m:
-        m.setattr(ctx, "target", tenor_msg, raising=False)
+        m.setattr(capturing_ctx, "target", tenor_msg, raising=False)
 
-        await context_cmd.callback(ctx)
+        await context_cmd.callback(capturing_ctx)
 
-    msg = await fetch_latest_message(ctx)
+    msg = capturing_ctx.testing_captured_message
 
     assert "There is no Tenor link in this message." in msg.content
