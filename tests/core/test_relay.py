@@ -5,7 +5,7 @@ import subprocess
 from types import SimpleNamespace
 
 import pytest
-from interactions import Guild, GuildText, logger_name
+from interactions import Guild, GuildText
 from pymongo.database import Database
 
 from comrade.core.comrade_client import Comrade
@@ -24,7 +24,7 @@ async def test_relay_init(
     """
     Test Relay initialization
     """
-    caplog.set_level(logging.INFO, logger=logger_name)
+    caplog.set_level(logging.INFO, logger="comrade.core.relay_system.relay_main")
 
     # ensure the collection is dropped before testing
     mongodb_instance.drop_collection("tempCollection")
