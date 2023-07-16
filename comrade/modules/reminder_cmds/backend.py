@@ -1,9 +1,8 @@
+from dataclasses import asdict
+
 from bson import ObjectId
 from interactions import (
-    Button,
-    ButtonStyle,
     DateTrigger,
-    Embed,
     InteractionContext,
     Task,
     listen,
@@ -11,7 +10,10 @@ from interactions import (
 
 from comrade.core.bot_subclass import Comrade
 from comrade.core.configuration import ACCENT_COLOUR
-from comrade.lib.discord_utils import messageable_from_context_id
+from comrade.lib.discord_utils import (
+    SafeLengthEmbed,
+    messageable_from_context_id,
+)
 from comrade.lib.reminders import Reminder
 
 
@@ -52,9 +54,9 @@ class RemindersBackend:
                 f"Successfully deleted reminder {reminder._id} from MongoDB."
             )
 
-    async def task_from_reminder(self, reminder: Reminder) -> Task:
+    async def get_reminder_task(self, reminder: Reminder) -> Task:
         """
-        Generates a task from a reminder,
+        Generates an interactions.py task from a reminder,
         which can then be set for execution.
 
         Parameters
@@ -72,7 +74,7 @@ class RemindersBackend:
         # Infer the channel in which to send the reminder
         # from the context ID of the reminder
         @Task.create(trigger=DateTrigger(reminder.naive_scheduled_time))
-        async def send_reminder():
+        async def send_reminder_task():
             sendable = await messageable_from_context_id(
                 reminder.context_id, self.bot
             )
@@ -102,7 +104,7 @@ class RemindersBackend:
                 self.clean_up_reminder(reminder)
                 return
 
-            embed = Embed(
+            embed = SafeLengthEmbed(
                 color=ACCENT_COLOUR,
                 description=reminder.note,
                 timestamp=reminder.created_at,
@@ -115,7 +117,7 @@ class RemindersBackend:
             content = author.mention
 
             if reminder.jump_url:
-                content += f"\nJump to message: {reminder.jump_url}"
+                content += f"\nJump to source message: {reminder.jump_url}"
 
             await sendable.send(
                 content=content, embed=embed, reply_to=reminder.reply_id
@@ -123,17 +125,51 @@ class RemindersBackend:
             self.bot.logger.info(f"Sent reminder {reminder._id}.")
             self.clean_up_reminder(reminder)
 
+        return send_reminder_task
+
+    async def start_reminder(self, reminder: Reminder) -> Task:
+        """
+        Starts a reminder as a task.
+
+        Fires off reminder immediately if it is already expired.
+
+        Parameters
+        ----------
+        reminder : Reminder
+            The reminder to start.
+
+        Returns
+        -------
+        Task
+            The task that was started.
+
+        """
+        send_reminder = await self.get_reminder_task(reminder)
+
+        if reminder.expired:
+            # Fire off the reminder immediately
+            self.bot.logger.warning(
+                f"Reminder {reminder._id} expired at "
+                f"{reminder.scheduled_time}, executing now."
+            )
+            await send_reminder.callback()
+            return send_reminder
+
+        # otherwise, start the task
+        send_reminder.start()
+        self.reminder_tasks[reminder._id] = send_reminder
+        self.bot.logger.info(f"Started reminder {reminder._id}.")
         return send_reminder
 
-    async def create_reminder(
+    async def create_and_store_reminder(
         self,
         ctx: InteractionContext,
         relative_time: str,
         reminder_note: str,
     ) -> Reminder | None:
         """
-        Schedule a reminder to fire off in a channel at a given time,
-        and returns the reminder.
+        Create a reminder from a context and a relative time,
+        and insert it into the database.
 
         Parameters
         ----------
@@ -158,21 +194,13 @@ class RemindersBackend:
             await ctx.send(str(e), ephemeral=True)
             return None
 
-        insertion_result = self.bot.db.remindersV7.insert_one(
-            reminder.to_dict()
-        )
+        insertion_result = self.bot.db.remindersV7.insert_one(asdict(reminder))
         if not insertion_result.acknowledged:
             self.bot.logger.error("Failed to insert reminder into MongoDB.")
         else:
             self.bot.logger.info(
                 f"Inserted reminder into MongoDB with ID {insertion_result.inserted_id}."
             )
-
-        reminder._id = insertion_result.inserted_id
-
-        reminder_task = await self.task_from_reminder(reminder)
-        reminder_task.start()
-        self.reminder_tasks[reminder._id] = reminder_task
         return reminder
 
     @listen("on_ready")
@@ -184,28 +212,11 @@ class RemindersBackend:
         reminder_dicts = list(self.bot.db.remindersV7.find())
 
         self.bot.logger.info(
-            f"Loaded {len(reminder_dicts)} reminders from MongoDB."
+            f"Need to start {len(reminder_dicts)} reminders from MongoDB."
         )
 
         for reminder_dict in reminder_dicts:
             reminder = Reminder.from_dict(reminder_dict)
-            send_reminder = await self.task_from_reminder(reminder)
-            # Handle reminders which expired while the bot was offline
-            if reminder.expired:
-                self.bot.logger.warning(
-                    f"Reminder {reminder._id} expired at "
-                    f"{reminder.scheduled_time}, executing now."
-                )
-                await send_reminder.callback()
-            else:
-                send_reminder.start()
-                self.reminder_tasks[reminder._id] = send_reminder
+            await self.start_reminder(reminder)
 
         self.bot.logger.info("Started all reminders.")
-
-    def del_reminder_button(self, _id: ObjectId) -> Button:
-        return Button(
-            style=ButtonStyle.DANGER,
-            label="Delete Reminder",
-            custom_id=f"del_reminder:{_id}",
-        )
