@@ -10,8 +10,8 @@ from interactions import (
     CommandType,
     ComponentContext,
     ContextMenuContext,
-    Embed,
     InteractionContext,
+    Message,
     Modal,
     ModalContext,
     OptionType,
@@ -24,6 +24,7 @@ from interactions import (
 from interactions.ext.hybrid_commands import HybridContext, hybrid_slash_command
 
 from comrade.core.configuration import ACCENT_COLOUR
+from comrade.lib.discord_utils import SafeLengthEmbed
 from comrade.lib.reminders import Reminder
 
 from .backend import RemindersBackend
@@ -32,12 +33,12 @@ from .backend import RemindersBackend
 class InterfaceCmds(RemindersBackend):
     async def send_confirmation(
         self, reminder: Reminder, ctx: InteractionContext
-    ):
+    ) -> Message:
         """
         Sends a message confirming that a reminder has been set.
         Also attaches a button to delete the reminder.
         """
-        embed = Embed(
+        embed = SafeLengthEmbed(
             color=ACCENT_COLOUR,
             description=reminder.note,
             timestamp=reminder.created_at,
@@ -49,7 +50,7 @@ class InterfaceCmds(RemindersBackend):
             icon_url=ctx.author.avatar.url,
         )
 
-        await ctx.send(
+        return await ctx.send(
             "Reminder registered to send "
             f"{reminder.timestamp.format(TimestampStyles.RelativeTime)} at "
             f"{reminder.timestamp.format(TimestampStyles.LongDateTime)}",
@@ -61,7 +62,7 @@ class InterfaceCmds(RemindersBackend):
     async def reminder_ctx_menu(self, menu_ctx: ContextMenuContext):
         modal = Modal(
             ShortText(
-                label="Relative Time",
+                label="Time from Now",
                 placeholder="e.g. '5s' or '2 hours, 7 minutes, 6 seconds'",
                 required=True,
                 custom_id="relative_time",
@@ -79,7 +80,7 @@ class InterfaceCmds(RemindersBackend):
 
         modal_ctx: ModalContext = await menu_ctx.bot.wait_for_modal(modal)
 
-        reminder = await self.create_reminder(
+        reminder = await self.create_and_store_reminder(
             menu_ctx,
             modal_ctx.responses["relative_time"],
             modal_ctx.responses["reminder_note"],
@@ -89,6 +90,7 @@ class InterfaceCmds(RemindersBackend):
             await modal_ctx.send("Reminder creation failed.")
             return
 
+        await self.start_reminder(reminder)
         await self.send_confirmation(reminder, modal_ctx)
 
     @hybrid_slash_command(
@@ -96,8 +98,11 @@ class InterfaceCmds(RemindersBackend):
         description="Set a reminder at a given time in the future.",
     )
     @slash_option(
-        name="relative_time",
-        description=("e.g. '5s' or '2 hours, 7 minutes' or '2d 5h 8m'."),
+        name="time_from_now",
+        description=(
+            "e.g. '5s' or '2 hours, 7 minutes' or '2d 5h 8m' "
+            "(the parser is pretty lenient)"
+        ),
         required=True,
         opt_type=OptionType.STRING,
     )
@@ -108,14 +113,23 @@ class InterfaceCmds(RemindersBackend):
         opt_type=OptionType.STRING,
     )
     async def reminder_slash_cmd(
-        self, ctx: HybridContext, relative_time: str, reminder_note: str
+        self, ctx: HybridContext, time_from_now: str, reminder_note: str
     ):
-        reminder = await self.create_reminder(ctx, relative_time, reminder_note)
+        reminder = await self.create_and_store_reminder(
+            ctx, time_from_now, reminder_note
+        )
 
         if reminder is None:
             return
 
-        await self.send_confirmation(reminder, ctx)
+        msg = await self.send_confirmation(reminder, ctx)
+
+        # patch in the jump url and update in the db (evil hack, needs a better API)
+        reminder.jump_url = msg.jump_url
+        self.bot.db.remindersV7.update_one(
+            {"_id": reminder._id}, {"$set": {"jump_url": msg.jump_url}}
+        )
+        await self.start_reminder(reminder)
 
     def del_reminder_button(self, _id: ObjectId) -> Button:
         return Button(

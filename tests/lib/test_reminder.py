@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 from comrade.lib.reminders import Reminder
@@ -11,7 +12,7 @@ def test_reminder_expiry_positive():
 
     reminder_time = now + negative_delta
 
-    reminder = Reminder(reminder_time, now, 1, 1, 1, "test", "test")
+    reminder = Reminder(reminder_time, 1, 1, 1, "test", "test")
 
     assert reminder.expired is True
 
@@ -22,7 +23,7 @@ def test_reminder_expiry_negative():
 
     reminder_time = now + positive_delta
 
-    reminder = Reminder(reminder_time, now, 1, 1, 1, "test", "test")
+    reminder = Reminder(reminder_time, 1, 1, 1, "test", "test")
 
     assert reminder.expired is False
 
@@ -33,7 +34,7 @@ def test_reminder_naive_timestamp():
 
     reminder_time = now + positive_delta
 
-    reminder = Reminder(reminder_time, now, 1, 1, 1, "test", "test")
+    reminder = Reminder(reminder_time, 1, 1, 1, "test", "test")
 
     local_tz = datetime.now().astimezone().tzinfo
 
@@ -79,3 +80,17 @@ def test_reminder_alternate_timezone():
     assert (
         reminder.naive_scheduled_time - naive_now_plus_1s
     ).total_seconds() < 1
+
+
+def test_reminder_jump_url_nominal():
+    fake_reminder = SimpleNamespace(
+        jump_url="https://discord.com/channels/0000001/00000000/12345678"
+    )
+
+    assert Reminder.reply_id.__get__(fake_reminder) == 12345678
+
+
+def test_reminder_jump_url_null():
+    fake_reminder = SimpleNamespace(jump_url=None)
+
+    assert Reminder.reply_id.__get__(fake_reminder) is None

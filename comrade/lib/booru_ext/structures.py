@@ -7,7 +7,7 @@ from orjson import loads
 
 from comrade.lib.booru_ext.const import OPTIONAL_EMBED_FIELDS
 from comrade.lib.booru_ext.filters import clean_up_post_tag
-from comrade.lib.discord_utils.safer_embeds import SafeLengthEmbed
+from comrade.lib.discord_utils import SafeLengthEmbed
 from comrade.lib.text_utils import escape_md
 
 # Create a type alias that can be any of the booru classes

@@ -2,9 +2,9 @@
     
 ![comrade-next-logo](https://user-images.githubusercontent.com/54449457/239707605-5ffae413-a8e7-4f3d-84b9-6100f053b61b.png)
 
-![Discord Bot](https://badgen.net/badge/icon/Discord%20Bot?icon=discord&label=Comrade%20NEXT)
+![Discord Bot](https://badgen.net/badge/icon/Comrade%20NEXT?icon=discord&label=Discord%20Bot)
 [![GitHub tag](https://img.shields.io/github/tag/itchono/comrade-next.svg)](https://github.com/itchono/comrade-next/tags)
-![Python 3.11](https://img.shields.io/badge/Python-3.11+-1081c1?logo=python)
+![Python 3.11](https://img.shields.io/badge/Python-3.10+-1081c1?logo=python)
 ![Code Style: Black](https://img.shields.io/badge/Code%20Style-black-000000.svg)
 
 [![Automated Tests](https://github.com/itchono/comrade-next/actions/workflows/ci-pytest.yml/badge.svg)](https://github.com/itchono/comrade-next/actions/workflows/ci-pytest.yml)

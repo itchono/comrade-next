@@ -1,6 +1,6 @@
 from interactions import Embed
 
-from comrade.lib.discord_utils.safer_embeds import SafeLengthEmbed
+from comrade.lib.discord_utils import SafeLengthEmbed
 
 
 def test_embed_nominal():

@@ -60,7 +60,16 @@ def event_loop():
     with suppress(asyncio.CancelledError):
         # try to finish all pending tasks
         pending_tasks = asyncio.all_tasks(loop=loop)
-        loop.run_until_complete(asyncio.gather(*pending_tasks))
+
+        # NOTE: reminder tasks loaded by the bot will be pending for a long time
+        # so we need to cancel them manually
+
+        if pending_tasks:
+            # give the tasks a timeout of 30 seconds
+            # to finish before we cancel them
+            futures = asyncio.wait(pending_tasks, timeout=30)
+
+            loop.run_until_complete(futures)
 
     loop.close()
 

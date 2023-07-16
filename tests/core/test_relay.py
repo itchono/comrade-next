@@ -84,7 +84,7 @@ async def test_update_hook_perform_update(
     """
     stored_args = []
 
-    dummy_msg = SimpleNamespace()
+    dummy_msg = SimpleNamespace(channel=channel)
 
     with monkeypatch.context() as m:
 
@@ -99,7 +99,6 @@ async def test_update_hook_perform_update(
 
         # IMPORTANT: PREVENT THE BOT FROM ACTUALLY STOPPING
         m.setattr(bot, "stop", bot_stop)
-        m.setattr(dummy_msg, "channel", channel, raising=False)
 
         await perform_update(dummy_msg, bot)
 
