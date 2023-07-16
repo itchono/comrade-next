@@ -3,12 +3,11 @@ import logging
 from argparse import ArgumentParser
 from pathlib import Path
 
-from interactions import logger_name
 from interactions.ext import hybrid_commands, prefixed_commands
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.core.configuration import ACCENT_COLOUR, BOT_TOKEN, DEV_MODE
-from comrade.core.init_logging import init_logging
+from comrade.core.logging_config import init_logging
 
 
 def main(args: list[str] = None, test_mode: bool = False) -> Comrade:
@@ -43,7 +42,6 @@ def main(args: list[str] = None, test_mode: bool = False) -> Comrade:
     args = parser.parse_args(args)
 
     init_logging(
-        logger_name,
         file_logging_level=logging.INFO,
         console_logging_level=logging.INFO,
     )
@@ -64,9 +62,11 @@ def main(args: list[str] = None, test_mode: bool = False) -> Comrade:
     )
     help_cmd.register()
 
+    logger = logging.getLogger(__name__)
+
     if DEV_MODE:
         bot.load_extension("interactions.ext.jurigged")
-        bot.logger.warning("Running in dev mode.")
+        logger.warning("Running in dev mode.")
 
     if test_mode:
         asyncio.create_task(bot.login(token=BOT_TOKEN))

@@ -7,7 +7,7 @@ import pytest
 from interactions import Client, Guild, GuildText
 
 from comrade.bot import main
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.core.configuration import TEST_GUILD_ID
 
 

@@ -4,7 +4,7 @@ import pytest
 from interactions import GuildText
 from interactions.api.events import MessageCreate
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.core.configuration import BOT_TOKEN
 
 

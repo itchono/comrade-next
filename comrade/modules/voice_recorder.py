@@ -13,7 +13,7 @@ from interactions import (
 )
 from pydub import AudioSegment
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 
 
 class VoiceRecorder(Extension):

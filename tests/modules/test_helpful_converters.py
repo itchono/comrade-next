@@ -1,7 +1,7 @@
 import pytest
 from interactions import BaseContext
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.lib.testing_utils import (
     fetch_latest_message,
 )

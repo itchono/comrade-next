@@ -172,3 +172,14 @@ def fake_subproc_check_output(*args, **kwargs) -> str:
 
         case _:
             return ""
+
+
+class CapturingContext(PrefixedContext):
+    """
+    Stores messasges sent in .send
+    to a testing_captured_messsage.
+
+    This is created by pytest fixtures and monkeypatching
+    """
+
+    testing_captured_message: Message

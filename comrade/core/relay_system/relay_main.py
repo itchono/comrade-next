@@ -10,7 +10,6 @@ from interactions import (
     GuildText,
     Listener,
     Message,
-    logger_name,
 )
 from interactions.api.events import MessageCreate
 from pymongo.collection import Collection
@@ -21,6 +20,8 @@ from comrade.lib.file_utils import give_filename_extension
 
 from .cache_mixin import RelayCacheMixin
 from .update_hook import is_valid_update_wh, perform_update
+
+logger = getLogger(__name__)
 
 
 class Relay(RelayCacheMixin):
@@ -70,12 +71,12 @@ class Relay(RelayCacheMixin):
             msg = event.message
             if msg._channel_id == self.relay_channel.id:
                 if is_valid_update_wh(msg):
-                    bot.logger.info("[RELAY] received update webhook")
+                    logger.info("received update webhook")
                     await perform_update(msg, self.bot)
                     return
 
-                bot.logger.info(
-                    f"[RELAY] received message from {msg.author.username}"
+                logger.info(
+                    f"received message from {msg.author.username}"
                     f" in {msg.guild.name}: {msg.content}"
                 )
 
@@ -85,8 +86,6 @@ class Relay(RelayCacheMixin):
         """
         Ensure that all channels exist
         """
-        logger = getLogger(logger_name)
-
         guild_channels = await self.guild.fetch_channels()
 
         channel_mapping = {channel.name: channel for channel in guild_channels}
@@ -110,7 +109,7 @@ class Relay(RelayCacheMixin):
                 " because it did not exist."
             )
 
-        logger.info(f"[RELAY] all channels initialized in {self.guild.name}")
+        logger.info(f"all channels initialized in {self.guild.name}")
 
     @classmethod
     async def from_bot(cls, bot: AugmentedClient, guild_id: int) -> Relay:

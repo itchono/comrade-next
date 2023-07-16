@@ -3,7 +3,7 @@ from interactions import (
     ButtonStyle,
 )
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.lib.discord_utils import ContextDict
 from comrade.lib.nhentai.structures import (
     NHentaiGallerySession,

@@ -8,7 +8,7 @@ import pytest
 from interactions import Guild, GuildText, logger_name
 from pymongo.database import Database
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.core.relay_system import Relay
 from comrade.core.relay_system.update_hook import perform_update
 from comrade.lib.testing_utils import fake_subproc_check_output

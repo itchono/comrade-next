@@ -17,7 +17,7 @@ from interactions import (
 )
 from pymongo.errors import DuplicateKeyError
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.lib.text_utils import text_safe_length
 
 

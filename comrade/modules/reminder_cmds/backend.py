@@ -1,4 +1,5 @@
 from dataclasses import asdict
+from logging import getLogger
 
 from bson import ObjectId
 from interactions import (
@@ -8,13 +9,15 @@ from interactions import (
     listen,
 )
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.core.configuration import ACCENT_COLOUR
 from comrade.lib.discord_utils import (
     SafeLengthEmbed,
     messageable_from_context_id,
 )
 from comrade.lib.reminders import Reminder
+
+logger = getLogger(__name__)
 
 
 class RemindersBackend:
@@ -42,15 +45,15 @@ class RemindersBackend:
         )
 
         if not deletion_result.acknowledged:
-            self.bot.logger.error(
+            logger.error(
                 f"Failed to delete reminder {reminder._id} from MongoDB."
             )
         elif deletion_result.deleted_count == 0:
-            self.bot.logger.error(
+            logger.error(
                 f"Failed to delete reminder {reminder._id} from MongoDB: reminder not found."
             )
         else:
-            self.bot.logger.info(
+            logger.info(
                 f"Successfully deleted reminder {reminder._id} from MongoDB."
             )
 
@@ -80,7 +83,7 @@ class RemindersBackend:
             )
 
             if not sendable:
-                self.bot.logger.error(
+                logger.error(
                     f"Failed to send reminder {reminder._id}: "
                     f"could not find channel with ID {reminder.context_id}."
                 )
@@ -97,7 +100,7 @@ class RemindersBackend:
 
             if author is None:
                 # e.g. author is no longer in the guild
-                self.bot.logger.error(
+                logger.error(
                     f"Failed to send reminder {reminder._id}: "
                     f"could not find author with ID {reminder.author_id}."
                 )
@@ -122,7 +125,7 @@ class RemindersBackend:
             await sendable.send(
                 content=content, embed=embed, reply_to=reminder.reply_id
             )
-            self.bot.logger.info(f"Sent reminder {reminder._id}.")
+            logger.info(f"Sent reminder {reminder._id}.")
             self.clean_up_reminder(reminder)
 
         return send_reminder_task
@@ -148,7 +151,7 @@ class RemindersBackend:
 
         if reminder.expired:
             # Fire off the reminder immediately
-            self.bot.logger.warning(
+            logger.warning(
                 f"Reminder {reminder._id} expired at "
                 f"{reminder.scheduled_time}, executing now."
             )
@@ -158,7 +161,7 @@ class RemindersBackend:
         # otherwise, start the task
         send_reminder.start()
         self.reminder_tasks[reminder._id] = send_reminder
-        self.bot.logger.info(f"Started reminder {reminder._id}.")
+        logger.info(f"Started reminder {reminder._id}.")
         return send_reminder
 
     async def create_and_store_reminder(
@@ -196,9 +199,9 @@ class RemindersBackend:
 
         insertion_result = self.bot.db.remindersV7.insert_one(asdict(reminder))
         if not insertion_result.acknowledged:
-            self.bot.logger.error("Failed to insert reminder into MongoDB.")
+            logger.error("Failed to insert reminder into MongoDB.")
         else:
-            self.bot.logger.info(
+            logger.info(
                 f"Inserted reminder into MongoDB with ID {insertion_result.inserted_id}."
             )
         return reminder
@@ -211,7 +214,7 @@ class RemindersBackend:
         """
         reminder_dicts = list(self.bot.db.remindersV7.find())
 
-        self.bot.logger.info(
+        logger.info(
             f"Need to start {len(reminder_dicts)} reminders from MongoDB."
         )
 
@@ -219,4 +222,4 @@ class RemindersBackend:
             reminder = Reminder.from_dict(reminder_dict)
             await self.start_reminder(reminder)
 
-        self.bot.logger.info("Started all reminders.")
+        logger.info("Started all reminders.")

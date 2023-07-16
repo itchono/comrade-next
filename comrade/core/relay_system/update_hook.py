@@ -1,3 +1,5 @@
+from logging import getLogger
+
 from interactions import Client, Message
 
 from comrade.core.updater import (
@@ -7,6 +9,8 @@ from comrade.core.updater import (
     restart_process,
     update_packages,
 )
+
+logger = getLogger(__name__)
 
 
 def is_valid_update_wh(msg: Message) -> bool:
@@ -60,5 +64,5 @@ async def perform_update(msg: Message, bot: Client) -> None:
 
     await msg.channel.send("Restarting bot...", ephemeral=True)
     await bot.stop()
-    bot.logger.warning("RESTARTING BOT FOR NEW UPDATE...")
+    logger.warning("RESTARTING BOT FOR NEW UPDATE...")
     restart_process(msg.channel.id)

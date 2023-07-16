@@ -5,7 +5,7 @@ from interactions import (
     StringSelectMenu,
 )
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.lib.nhentai.structures import NHentaiSortOrder
 from comrade.lib.testing_utils import wait_for_message_or_fetch
 from comrade.modules.nhentai_cmds import NHentai

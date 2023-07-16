@@ -3,7 +3,7 @@ import re
 import pytest
 from interactions import BaseContext, Button, ComponentType, StringSelectMenu
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.lib.nhentai.structures import NHentaiSortOrder
 from comrade.lib.testing_utils import fetch_latest_message
 from comrade.modules.nhentai_cmds import NHentai
