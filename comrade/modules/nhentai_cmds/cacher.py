@@ -1,3 +1,5 @@
+from logging import getLogger
+
 from aiohttp import ClientResponseError
 
 from comrade.lib.nhentai.structures import (
@@ -5,6 +7,8 @@ from comrade.lib.nhentai.structures import (
 )
 
 from .base import NHBase
+
+logger = getLogger(__name__)
 
 
 class NHCacher(NHBase):
@@ -72,8 +76,8 @@ class NHCacher(NHBase):
 
                 nums_cached.append(page_num)
             except ClientResponseError:
-                self.bot.logger.warning(
-                    f"[NHENTAI] Could not cache {page_url}"
+                logger.warning(
+                    f"Could not cache {page_url}"
                     f"for gallery {session.gallery.gallery_id}"
                 )
                 pass

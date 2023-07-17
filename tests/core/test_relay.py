@@ -5,11 +5,12 @@ import subprocess
 from types import SimpleNamespace
 
 import pytest
-from interactions import Guild, GuildText, logger_name
+from interactions import Guild, GuildText
 from pymongo.database import Database
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.core.relay_system import Relay
+from comrade.core.relay_system.relay_main import __name__ as logger_name
 from comrade.core.relay_system.update_hook import perform_update
 from comrade.lib.testing_utils import fake_subproc_check_output
 

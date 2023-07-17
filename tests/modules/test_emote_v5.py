@@ -1,13 +1,15 @@
 import pytest
-from interactions import BaseContext
 from interactions.api.events import MessageCreate
+from interactions.ext.prefixed_commands import PrefixedContext
 
-from comrade.lib.testing_utils import wait_for_message_or_fetch
+from comrade.lib.testing_utils import (
+    wait_for_message_or_fetch,
+)
 
 
 @pytest.mark.bot
 @pytest.mark.parametrize("emote", ("pssh", "PSSH"))
-async def test_sending_emote(ctx: BaseContext, emote: str):
+async def test_sending_emote(ctx: PrefixedContext, emote: str):
     """
     Tests sending an emote from the bot,
     with both case-sensitive and case-insensitive emote names.
@@ -26,13 +28,13 @@ async def test_sending_emote(ctx: BaseContext, emote: str):
 
 
 @pytest.mark.bot
-async def test_no_emote(ctx: BaseContext):
+async def test_no_emote(ctx: PrefixedContext):
     await ctx.send(":pssh2doesnotexist:")
 
     def check(m: MessageCreate):
         return m.message.author.id == ctx.bot.user.id
 
-    error_msg = await wait_for_message_or_fetch(ctx, check)
+    error_msg = await wait_for_message_or_fetch(ctx, check, timeout=10)
     embed = error_msg.embeds[0]
     assert embed.title == "Emote not found."
     assert (

@@ -1,13 +1,14 @@
 import pytest
 from interactions import (
-    BaseContext,
     ComponentType,
     StringSelectMenu,
 )
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.lib.nhentai.structures import NHentaiSortOrder
-from comrade.lib.testing_utils import wait_for_message_or_fetch
+from comrade.lib.testing_utils import (
+    CapturingContext,
+)
 from comrade.modules.nhentai_cmds import NHentai
 
 
@@ -17,7 +18,9 @@ async def nhentai_ext(bot: Comrade) -> NHentai:
 
 
 @pytest.mark.bot
-async def test_search_start(ctx: BaseContext, nhentai_ext: NHentai):
+async def test_search_start(
+    capturing_ctx: CapturingContext, nhentai_ext: NHentai
+):
     """
     Make sure that we can find a gallery from search.
 
@@ -28,13 +31,12 @@ async def test_search_start(ctx: BaseContext, nhentai_ext: NHentai):
     nhentai_search_cmd = nhentai_ext.nhentai_search
 
     await nhentai_search_cmd.callback(
-        ctx, "alp love live english kurosawa", NHentaiSortOrder.POPULAR_ALL_TIME
+        capturing_ctx,
+        "alp love live english kurosawa",
+        NHentaiSortOrder.POPULAR_ALL_TIME,
     )
 
-    start_msg = await wait_for_message_or_fetch(
-        ctx, lambda m: m.message.components
-    )
-
+    start_msg = capturing_ctx.testing_captured_message
     assert start_msg.content == "Select a gallery to view (Page 1 / 1)"
 
     action_row = start_msg.components[0]
@@ -52,19 +54,19 @@ async def test_search_start(ctx: BaseContext, nhentai_ext: NHentai):
 
 @pytest.mark.bot
 async def test_search_click(
-    ctx: BaseContext, nhentai_ext: NHentai, monkeypatch: pytest.MonkeyPatch
+    capturing_ctx: CapturingContext,
+    nhentai_ext: NHentai,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     """
     Test that we can click on a gallery from search.
     """
 
     with monkeypatch.context() as m:
-        m.setattr(ctx, "values", ["388445"], raising=False)
-        await nhentai_ext.nhentai_search_callback.callback(ctx)
+        m.setattr(capturing_ctx, "values", ["388445"], raising=False)
+        await nhentai_ext.nhentai_search_callback.callback(capturing_ctx)
 
-    start_embed_msg = await wait_for_message_or_fetch(
-        ctx, lambda m: m.message.embeds
-    )
+    start_embed_msg = capturing_ctx.testing_captured_message
     assert (
         start_embed_msg.content
         == "Type `np` (or click the buttons) to start reading, and advance pages."

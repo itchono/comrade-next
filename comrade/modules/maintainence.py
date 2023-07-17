@@ -1,3 +1,5 @@
+from logging import getLogger
+
 from interactions import Extension, SlashContext, check, is_owner
 from interactions.ext.prefixed_commands import PrefixedContext, prefixed_command
 
@@ -11,6 +13,8 @@ from comrade.core.updater import (
     update_packages,
 )
 from comrade.lib.discord_utils import context_id
+
+logger = getLogger(__name__)
 
 
 class Maintainence(Extension):
@@ -29,7 +33,7 @@ class Maintainence(Extension):
         """
         await ctx.send("Restarting...", ephemeral=True)
         await self.bot.stop()
-        self.bot.logger.warning("RESTARTING BOT!")
+        logger.warning("RESTARTING BOT!")
         restart_process(context_id(ctx))
 
     @prefixed_command(help="Checks for updates on this git branch")
@@ -96,7 +100,7 @@ class Maintainence(Extension):
 
         await ctx.send("Restarting bot...", ephemeral=True)
         await self.bot.stop()
-        self.bot.logger.warning("RESTARTING BOT FOR NEW UPDATE...")
+        logger.warning("RESTARTING BOT FOR NEW UPDATE...")
         restart_process(context_id(ctx))
 
 

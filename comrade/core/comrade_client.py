@@ -1,3 +1,5 @@
+from logging import getLogger
+
 import orjson
 from aiohttp import ClientSession
 from interactions import Activity, ActivityType, listen
@@ -13,6 +15,8 @@ from comrade.core.configuration import (
 from comrade.core.const import CLIENT_INIT_KWARGS
 from comrade.core.relay_system import RelayMixin
 from comrade.lib.discord_utils import messageable_from_context_id
+
+logger = getLogger(__name__)
 
 
 class Comrade(
@@ -45,12 +49,12 @@ class Comrade(
             **kwargs,
         )
 
-        self.logger.info(f"Starting Comrade version {__version__}")
+        logger.info(f"Starting Comrade version {__version__}")
 
         # Comrade-specific init
         mongo_client = MongoClient(MONGODB_URI)  # Connect to MongoDB
         self.db = mongo_client[mongo_client.list_database_names()[0]]
-        self.logger.info(f"Connected to MongoDB, database name: {self.db.name}")
+        logger.info(f"Connected to MongoDB, database name: {self.db.name}")
 
         if kwargs.get("notify_on_restart"):
             self.notify_on_restart = kwargs["notify_on_restart"]
@@ -68,13 +72,11 @@ class Comrade(
         # Set up relay guild
         await self.init_relay(RELAY_GUILD_ID)
 
-        self.logger.info(
-            f"Bot is Ready. Logged in as {self.user} ({self.user.id})"
-        )
+        logger.info(f"Bot is Ready. Logged in as {self.user} ({self.user.id})")
 
         # Notify on restart, if enabled
         if self.notify_on_restart:
-            self.logger.info(
+            logger.info(
                 f"Notifying on restart: Channel/User with ID {self.notify_on_restart}"
             )
 
@@ -86,7 +88,7 @@ class Comrade(
                     f"Bot has restarted, current version is {__version__}."
                 )
             except ValueError:
-                self.logger.warning(
+                logger.warning(
                     f"Could not find channel or user with ID {self.notify_on_restart}"
                 )
 

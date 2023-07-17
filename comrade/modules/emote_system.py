@@ -1,7 +1,7 @@
 from interactions import Embed, Extension, listen
 from interactions.api.events import MessageCreate
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.lib.discord_utils import echo
 from comrade.lib.emotes.finder import find_emote_v5, find_similar_emotes
 

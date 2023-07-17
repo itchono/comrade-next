@@ -3,7 +3,7 @@ from interactions import Guild
 from pymongo import MongoClient
 from pymongo.database import Database
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.core.configuration import MONGODB_URI
 
 

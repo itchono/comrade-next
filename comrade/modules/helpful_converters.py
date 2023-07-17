@@ -5,7 +5,7 @@ from interactions import (
     message_context_menu,
 )
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.lib.tenor import tenor_link_to_gif
 
 

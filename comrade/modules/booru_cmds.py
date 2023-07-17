@@ -16,7 +16,7 @@ from interactions import (
 from interactions.api.events import MessageCreate
 from interactions.ext.prefixed_commands import PrefixedContext
 
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.lib.booru_ext import (
     BOORUS,
     BooruSession,

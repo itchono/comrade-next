@@ -1,19 +1,25 @@
+from io import StringIO
+from logging import getLogger
 from platform import python_version
 
 from interactions import (
     Embed,
     Extension,
     File,
+    OptionType,
     SlashContext,
     TimestampStyles,
     slash_command,
+    slash_option,
 )
 from interactions.client.const import __version__ as __interactions_version__
 
 from comrade._version import __version__ as __comrade_version__
-from comrade.core.bot_subclass import Comrade
+from comrade.core.comrade_client import Comrade
 from comrade.core.configuration import ACCENT_COLOUR
 from comrade.core.updater import get_current_branch
+
+logger = getLogger(__name__)
 
 
 class Telemetry(Extension):
@@ -58,10 +64,26 @@ class Telemetry(Extension):
     @slash_command(
         description="Gets the log for the bot",
     )
-    async def log(self, ctx: SlashContext):
-        log_path = self.bot.logger.handlers[1].baseFilename
+    @slash_option(
+        name="lines",
+        description="send only the last N lines",
+        required=False,
+        opt_type=OptionType.INTEGER,
+        min_value=1,
+    )
+    async def log(self, ctx: SlashContext, lines: int = None):
+        log_path = ctx.bot.logger.handlers[1].baseFilename  # janky but it works
 
-        log_file = File(log_path, file_name="comrade_log.txt")
+        if lines is not None:
+            with open(log_path, "r") as log_file:
+                log_lines = log_file.readlines()[-lines:]
+
+            joined_lines = "".join(log_lines)
+
+            log_file = File(StringIO(joined_lines), file_name="comrade_log.txt")
+        else:
+            # full log
+            log_file = File(log_path, file_name="comrade_log.txt")
         await ctx.send(file=log_file, ephemeral=True)
 
 
