@@ -78,14 +78,14 @@ class RemindersBackend:
         # from the context ID of the reminder
         @Task.create(trigger=DateTrigger(reminder.naive_scheduled_time))
         async def send_reminder_task():
-            sendable = await messageable_from_context_id(
-                reminder.context_id, self.bot
-            )
-
-            if not sendable:
+            try:
+                sendable = await messageable_from_context_id(
+                    reminder.context_id, self.bot
+                )
+            except ValueError:
                 logger.error(
                     f"Failed to send reminder {reminder._id}: "
-                    f"could not find channel with ID {reminder.context_id}."
+                    f"could not find channel/user with ID {reminder.context_id}."
                 )
                 return
 

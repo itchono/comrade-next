@@ -10,6 +10,7 @@ from pymongo.database import Database
 
 from comrade.core.comrade_client import Comrade
 from comrade.core.relay_system import Relay
+from comrade.core.relay_system.relay_main import __name__ as logger_name
 from comrade.core.relay_system.update_hook import perform_update
 from comrade.lib.testing_utils import fake_subproc_check_output
 
@@ -24,7 +25,7 @@ async def test_relay_init(
     """
     Test Relay initialization
     """
-    caplog.set_level(logging.INFO, logger="comrade.core.relay_system.relay_main")
+    caplog.set_level(logging.INFO, logger=logger_name)
 
     # ensure the collection is dropped before testing
     mongodb_instance.drop_collection("tempCollection")

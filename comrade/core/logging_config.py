@@ -94,13 +94,13 @@ def init_logging(
             "comrade": {
                 "handlers": ["console", "file"],
                 "level": min(file_logging_level, console_logging_level),
-                "propagate": False,
+                "propagate": True,
             },
             # Configure interactions.py logger
             logger_name: {
                 "handlers": ["console", "file"],
                 "level": min(file_logging_level, console_logging_level),
-                "propagate": False,
+                "propagate": True,
             },
         },
     }
