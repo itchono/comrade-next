@@ -8,7 +8,7 @@ from comrade.lib.testing_utils import (
 
 
 @pytest.mark.bot
-@pytest.mark.parametrize("emote", ("pssh", "PSSH"))
+@pytest.mark.parametrize("emote", ("pssh", "PSSH", " pssh "))
 async def test_sending_emote(ctx: PrefixedContext, emote: str):
     """
     Tests sending an emote from the bot,

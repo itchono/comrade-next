@@ -43,7 +43,8 @@ class EmoteSystem(Extension):
             return
 
         if msg.content.startswith(":") and msg.content.endswith(":"):
-            parse_str = msg.content.strip(":").lower()
+            # remove : :, as well as any spaces around the emote name
+            parse_str = msg.content.strip(": ").lower()
             try:
                 emote = find_emote_v5(
                     parse_str,
