@@ -83,10 +83,13 @@ class RemindersBackend:
                     reminder.context_id, self.bot
                 )
             except ValueError:
+                # e.g. channel has been deleted
                 logger.error(
                     f"Failed to send reminder {reminder._id}: "
                     f"could not find channel/user with ID {reminder.context_id}."
+                    " Deleting reminder."
                 )
+                self.clean_up_reminder(reminder)
                 return
 
             if reminder.guild_id:
@@ -103,6 +106,7 @@ class RemindersBackend:
                 logger.error(
                     f"Failed to send reminder {reminder._id}: "
                     f"could not find author with ID {reminder.author_id}."
+                    " Deleting reminder."
                 )
                 self.clean_up_reminder(reminder)
                 return
