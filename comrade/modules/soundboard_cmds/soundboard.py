@@ -9,11 +9,11 @@ from interactions import (
     component_callback,
     slash_command,
     slash_option,
-    spread_to_rows,
 )
 from interactions.api.voice.audio import AudioVolume
 
 from comrade.core.comrade_client import Comrade
+from comrade.lib.discord_utils import DynamicPaginator
 
 from .backend import SoundboardBackend
 
@@ -24,13 +24,13 @@ class Soundboard(Extension, SoundboardBackend):
     @slash_command(
         name="soundboard",
         description="soundboard system",
-        sub_cmd_name="addsound",
-        sub_cmd_description="Add a sound to the soundboard",
+        sub_cmd_name="add_sound",
+        sub_cmd_description="Add a sound to the soundboard (15 seconds max)",
         dm_permission=False,
     )
     @slash_option(
         name="url",
-        description="The url of the youtube video",
+        description="Youtube URL to download sound from, or link to a sound file",
         required=True,
         opt_type=OptionType.STRING,
     )
@@ -40,11 +40,39 @@ class Soundboard(Extension, SoundboardBackend):
         required=True,
         opt_type=OptionType.STRING,
     )
-    async def soundboard_addsound(self, ctx: SlashContext, url: str, name: str):
+    @slash_option(
+        name="emoji",
+        description="The emoji to use for the sound",
+        required=False,
+        opt_type=OptionType.STRING,
+    )
+    async def soundboard_add_sound(
+        self, ctx: SlashContext, url: str, name: str, emoji: str = None
+    ):
         await ctx.defer()
-        audio = await self.create_soundboard_audio(ctx, url, name)
+        audio = await self.create_soundboard_audio(ctx, url, name, emoji)
 
         await ctx.send(f"Soundboard audio `{audio.name}` added.")
+
+    @slash_command(
+        name="soundboard",
+        description="soundboard system",
+        sub_cmd_name="remove_sound",
+        sub_cmd_description="Remove a sound from the soundboard",
+        dm_permission=False,
+    )
+    @slash_option(
+        name="name",
+        description="The name of the sound",
+        required=True,
+        opt_type=OptionType.STRING,
+    )
+    async def soundboard_remove_sound(self, ctx: SlashContext, name: str):
+        try:
+            self.delete_soundboard_audio(ctx, name)
+            await ctx.send(f"Soundboard audio `{name}` removed.")
+        except ValueError as e:
+            await ctx.send(f"Could not remove sound `{name}`: {e}")
 
     @slash_command(
         name="soundboard",
@@ -58,7 +86,16 @@ class Soundboard(Extension, SoundboardBackend):
             # This should never happen, but just in case
             await ctx.send("This command can only be used in a server.")
 
+        audios = self.get_all_soundboard_audio_in_guild(ctx.guild_id)
+
+        if audios is None:
+            await ctx.send("No soundboard audio found.")
+            return
+
         if ctx.voice_state is not None:
+            if ctx.voice_state.channel == ctx.author.voice.channel:
+                await ctx.send("Already connected to your voice channel.")
+                return
             await ctx.voice_state.disconnect()
 
         if ctx.author.voice is None:
@@ -67,16 +104,13 @@ class Soundboard(Extension, SoundboardBackend):
 
         await ctx.author.voice.channel.connect()
 
-        audios = self.get_all_soundboard_audio_in_guild(ctx.guild_id)
+        paginator = DynamicPaginator(
+            self.bot,
+            await self.paginator_callback(ctx),
+            maximum_pages=len(audios) // 20 + 1,
+        )
 
-        if audios is None:
-            await ctx.send("No soundboard audio found.")
-            return
-
-        # trim to the first 25 for now, work on pagination later
-        components = spread_to_rows(*[audio.button for audio in audios[:25]])
-
-        await ctx.send("Connected to voice channel.", components=components)
+        await paginator.send(ctx)
 
     @slash_command(
         name="soundboard",
@@ -88,7 +122,9 @@ class Soundboard(Extension, SoundboardBackend):
     async def soundboard_disconnect(self, ctx: SlashContext):
         if ctx.voice_state is not None:
             await ctx.voice_state.disconnect()
-        await ctx.send("Disconnected from voice channel.")
+            await ctx.send("Disconnected from voice channel.")
+        else:
+            await ctx.send("Not connected to a voice channel.", ephemeral=True)
 
     @component_callback(re.compile(r"soundboard:(\d+)"))
     async def soundboard_button_callback(self, ctx: ComponentContext):
@@ -96,8 +132,20 @@ class Soundboard(Extension, SoundboardBackend):
 
         audio = self.get_soundboard_audio(audio_id)
 
+        if audio is None:
+            await ctx.send(
+                "Could not find soundboard audio. "
+                "Try reconnecting the bot, as a sound may have been removed.",
+                ephemeral=True,
+            )
+            return
+
         if ctx.voice_state is None:
-            await ctx.send("Not connected to a voice channel.")
+            await ctx.send(
+                "Not connected to a voice channel."
+                " Call /soundboard connect to start the soundboard.",
+                ephemeral=True,
+            )
             return
 
         await ctx.edit_origin(content=f"Playing `{audio.name}`")
