@@ -197,9 +197,8 @@ class CapturingContext(PrefixedContext):
         and instead plugs in a fake response.
         """
         # Extract message payload fields, and patch in any missing ones
-        msg_payload = args[0]
-        base_payload: dict = SAMPLE_MESSAGE_DATA(user_id=self.bot.user.id)
-        msg_payload = base_payload.update(msg_payload)
+        msg_payload: dict = SAMPLE_MESSAGE_DATA(user_id=self.bot.user.id)
+        msg_payload.update(args[0])
 
         self.testing_captured_message = Message.from_dict(
             msg_payload, self.client
