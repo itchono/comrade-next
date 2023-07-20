@@ -7,8 +7,7 @@ from bson import ObjectId
 from interactions import ActionRow, BaseContext, spread_to_rows
 
 from comrade.core.comrade_client import Comrade
-from comrade.lib.sound_system.downloader import download_video_to_mp3
-from comrade.lib.sound_system.structures import SoundboardAudio
+from comrade.lib.sound_system import SoundboardAudio, download_video_to_mp3
 
 
 class SoundboardBackend:

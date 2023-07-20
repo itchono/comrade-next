@@ -168,3 +168,32 @@ async def test_autocomplete_blank(
         suggestions = tags[0]
 
         assert suggestions == ["(Start typing to get tag suggestions)"]
+
+
+@pytest.mark.bot
+async def test_autocomplete_no_suggestion(
+    ctx: PrefixedContext,
+    booru_ext: Booru,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    tags = []
+
+    # capture the tags that are sent
+    async def monkeypatched_send(*args, **kwargs):
+        tags.append(args[0])
+
+    with monkeypatch.context() as m:
+        m.setattr(
+            ctx,
+            "kwargs",
+            {"booru_name": "gelbooru", "tags": "qwertyuiopasdfghjklzxcvbnm"},
+        )
+        m.setattr(ctx, "send", monkeypatched_send)
+
+        # execute the autocomplete request
+        await booru_ext.tags_autocomplete(ctx)
+
+        # check
+        suggestions = tags[0]
+
+        assert suggestions == ["qwertyuiopasdfghjklzxcvbnm"]

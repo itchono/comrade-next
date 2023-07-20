@@ -4,6 +4,8 @@ from tempfile import TemporaryDirectory
 
 from yt_dlp import YoutubeDL
 
+MAX_DOWNLOAD_TIME = 60 * 10  # 10 minutes
+
 
 def download_video_to_mp3(url: str, limit_time: int = None) -> BytesIO:
     """
@@ -41,10 +43,22 @@ def download_video_to_mp3(url: str, limit_time: int = None) -> BytesIO:
         }
 
         if limit_time is not None:
-            # limit the duration of the video
-            ydl_opts.update({"noplaylist": True, "duration": limit_time})
+            # limit the duration of the video in postprocessing
+            ydl_opts["postprocessor_args"] = [
+                "-ss",
+                "0",
+                "-t",
+                str(limit_time),
+            ]
 
         with YoutubeDL(ydl_opts) as ydl:
+            # sanity check length first
+            info_dict = ydl.extract_info(url, download=False)
+            if info_dict["duration"] > MAX_DOWNLOAD_TIME:
+                raise ValueError(
+                    f"Video duration exceeds maximum of {MAX_DOWNLOAD_TIME} seconds"
+                )
+
             ydl.download([url])
 
         # get the data from the temporary file
