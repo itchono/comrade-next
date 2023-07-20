@@ -37,7 +37,10 @@ async def test_search_start(
     )
 
     start_msg = capturing_ctx.testing_captured_message
-    assert start_msg.content == "Select a gallery to view (Page 1 / 1)"
+    assert start_msg.content == (
+        "3 result(s) found for query `alp love live english kurosawa`\n"
+        "Select a gallery to view (Page 1 / 1)"
+    )
 
     action_row = start_msg.components[0]
 

@@ -5,14 +5,20 @@ import subprocess
 from types import SimpleNamespace
 
 import pytest
-from interactions import Guild, GuildText
+from interactions import Client, Embed, Guild, GuildText, Message
 from pymongo.database import Database
 
 from comrade.core.comrade_client import Comrade
 from comrade.core.relay_system import Relay
 from comrade.core.relay_system.relay_main import __name__ as logger_name
-from comrade.core.relay_system.update_hook import perform_update
-from comrade.lib.testing_utils import fake_subproc_check_output
+from comrade.core.relay_system.update_hook import (
+    is_valid_update_wh,
+    perform_update,
+)
+from comrade.lib.testing_utils import (
+    SAMPLE_MESSAGE_DATA,
+    fake_subproc_check_output,
+)
 
 
 @pytest.mark.bot
@@ -104,3 +110,56 @@ async def test_update_hook_perform_update(
         await perform_update(dummy_msg, bot)
 
         assert "--notify_channel" in stored_args[0][1]
+
+
+def test_update_hook_filter_nominal():
+    message_data = SAMPLE_MESSAGE_DATA()
+
+    message_data["webhook_id"] = 1234567890
+    message = Message.from_dict(message_data, Client())
+
+    embed = Embed("[itchono/comrade-next] New tag created: v0.19.1")
+    embed.set_author(name="itchono")
+
+    message.embeds = [embed]
+
+    assert is_valid_update_wh(message)
+
+
+def test_update_hook_filter_invalid_1():
+    """
+    Invalid because a new tag was not created
+    """
+    message_data = SAMPLE_MESSAGE_DATA()
+
+    message_data["webhook_id"] = 1234567890
+    message = Message.from_dict(message_data, Client())
+
+    embed = Embed("[itchono/comrade-next] New branch created: soundboard_mvp")
+    embed.set_author(name="itchono")
+
+    message.embeds = [embed]
+
+    assert not is_valid_update_wh(message)
+
+
+def test_update_hook_filter_invalid_2():
+    """
+    Invalid because not a webhook message
+    """
+    message_data = SAMPLE_MESSAGE_DATA()
+    message = Message.from_dict(message_data, Client())
+
+    assert not is_valid_update_wh(message)
+
+
+def test_update_hook_filter_invalid_3():
+    """
+    Invalid because no embeds
+    """
+    message_data = SAMPLE_MESSAGE_DATA()
+
+    message_data["webhook_id"] = 1234567890
+    message = Message.from_dict(message_data, Client())
+
+    assert not is_valid_update_wh(message)

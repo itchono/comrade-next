@@ -178,8 +178,17 @@ class NHSearchHandler(NHGalleryInit):
                 placeholder=f"Select a gallery from page {page_num}",
             )
 
+            # Return components and a string indicating status
+            if search_session.maximum_pages == 1:
+                status_str = f"{len(options)} result(s) found"
+            else:
+                status_str = (
+                    f"{25 * (search_session.maximum_pages-1)}+ results found"
+                )
+
             return (
                 [ActionRow(menu)],
+                f"{status_str} for query `{search_session.query}`\n"
                 "Select a gallery to view "
                 f"(Page {page_num} / {search_session.maximum_pages})",
             )

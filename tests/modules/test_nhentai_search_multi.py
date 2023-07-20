@@ -33,7 +33,10 @@ async def test_search_start(
 
     start_msg = capturing_ctx.testing_captured_message
 
-    assert start_msg.content == "Select a gallery to view (Page 1 / 8)"
+    assert start_msg.content == (
+        "175+ results found for query `alp love live`\n"
+        "Select a gallery to view (Page 1 / 8)"
+    )
 
     action_row = start_msg.components[0]
 
@@ -48,7 +51,6 @@ async def test_search_start(
 @pytest.mark.bot
 async def test_search_next_page(
     capturing_ctx: CapturingContext,
-    nhentai_ext: NHentai,
     monkeypatch: pytest.MonkeyPatch,
 ):
     """
@@ -84,13 +86,15 @@ async def test_search_next_page(
 
     menu_msg = capturing_ctx.testing_captured_message
 
-    assert menu_msg.content == "Select a gallery to view (Page 2 / 8)"
+    assert menu_msg.content == (
+        "175+ results found for query `alp love live`\n"
+        "Select a gallery to view (Page 2 / 8)"
+    )
 
 
 @pytest.mark.bot
 async def test_search_last_page(
     capturing_ctx: CapturingContext,
-    nhentai_ext: NHentai,
     monkeypatch: pytest.MonkeyPatch,
 ):
     """
@@ -129,13 +133,15 @@ async def test_search_last_page(
 
     menu_msg = capturing_ctx.testing_captured_message
 
-    assert menu_msg.content == "Select a gallery to view (Page 8 / 8)"
+    assert menu_msg.content == (
+        "175+ results found for query `alp love live`\n"
+        "Select a gallery to view (Page 8 / 8)"
+    )
 
 
 @pytest.mark.bot
 async def test_same_page(
     capturing_ctx: CapturingContext,
-    nhentai_ext: NHentai,
     monkeypatch: pytest.MonkeyPatch,
 ):
     """

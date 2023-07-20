@@ -2,6 +2,8 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from comrade.lib.reminders import Reminder
 from comrade.lib.testing_utils import generate_dummy_context
 
@@ -64,6 +66,13 @@ def test_reminder_generate_from_ctx_guild():
     assert reminder.author_id == fake_ctx.author_id
     assert reminder.context_id == fake_ctx.channel_id
     assert reminder.guild_id == fake_ctx.guild_id
+
+
+def test_reminder_generate_from_ctx_guild_invalid_time():
+    fake_ctx = generate_dummy_context(guild_id=1)
+
+    with pytest.raises(ValueError):
+        Reminder.from_relative_time_and_ctx("bananas", fake_ctx, timezone.utc)
 
 
 def test_reminder_alternate_timezone():
