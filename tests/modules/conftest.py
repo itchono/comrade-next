@@ -2,7 +2,7 @@
 # Modelled off of interactions.py's test fixtures
 
 import pytest
-from interactions import Client, GuildText, Message
+from interactions import Client, GuildText
 from interactions.ext.prefixed_commands import PrefixedContext
 
 from comrade.core.configuration import TEST_GUILD_ID
@@ -46,13 +46,30 @@ async def capturing_ctx(
 
     TODO: try to intercept the message before it's sent to discord
     """
-
-    async def send_and_capture(self, *args, **kwargs) -> Message:
-        self.testing_captured_message = await PrefixedContext.send(
-            self, *args, **kwargs
-        )
-        return self.testing_captured_message
-
     with monkeypatch.context() as m:
-        m.setattr(ctx, "send", send_and_capture.__get__(ctx))
+        m.setattr(ctx, "send", CapturingContext.send_and_capture.__get__(ctx))
+        yield ctx
+
+
+@pytest.fixture(scope="function")
+async def offline_ctx(
+    ctx: PrefixedContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> CapturingContext:
+    """
+    Patched version of ctx which captures the message
+    after sending it to discord.
+    it into a `testing_captured_message` attribute.
+
+    Also bypasses the HTTP request process to discord,
+    useful for testing simple commands which do not
+    require followups.
+    """
+    with monkeypatch.context() as m:
+        m.setattr(ctx, "send", CapturingContext.send_and_capture.__get__(ctx))
+        m.setattr(
+            ctx,
+            "_send_http_request",
+            CapturingContext.fake_send_http_request.__get__(ctx),
+        )
         yield ctx

@@ -176,10 +176,32 @@ def fake_subproc_check_output(*args, **kwargs) -> str:
 
 class CapturingContext(PrefixedContext):
     """
-    Stores messasges sent in .send
-    to a testing_captured_messsage.
+    Added functions for performing:
+    1. capturing of messages sent by the bot
+    2. bypassing of internet requests for sending messages
 
     This is created by pytest fixtures and monkeypatching
     """
 
     testing_captured_message: Message
+
+    async def send_and_capture(self, *args, **kwargs) -> Message:
+        self.testing_captured_message = await PrefixedContext.send(
+            self, *args, **kwargs
+        )
+        return self.testing_captured_message
+
+    async def fake_send_http_request(self, *args, **kwargs):
+        """
+        For use with monkeypatching; bypasses the internet
+        and instead plugs in a fake response.
+        """
+        # Extract message payload fields, and patch in any missing ones
+        msg_payload = args[0]
+        base_payload: dict = SAMPLE_MESSAGE_DATA(user_id=self.bot.user.id)
+        msg_payload = base_payload.update(msg_payload)
+
+        self.testing_captured_message = Message.from_dict(
+            msg_payload, self.client
+        )
+        return None
