@@ -37,7 +37,7 @@ async def test_reminder_from_slash(
         )
 
         await reminder_slash_cmd.callback(
-            replyable_ctx, "in 5 seconds", "test reminder"
+            replyable_ctx, "in 3 seconds", "test reminder"
         )  # the wait duration might need to change according to ratelimits during testing
 
         # Check that confirmation message was sent

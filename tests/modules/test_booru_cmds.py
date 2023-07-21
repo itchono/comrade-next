@@ -38,29 +38,36 @@ async def test_booru_start_gelbooru_single(
 
 
 @pytest.mark.bot
-async def test_booru_advance_msg(prefixed_ctx: PrefixedContext):
+async def test_booru_advance_msg(
+    offline_ctx: CapturingContext, booru_ext: Booru
+):
     # starting from the previous test
-
     # The post list should be depleted now
-    await prefixed_ctx.send("next")
+
+    # call the listener using a fake message containing "next"
+    await offline_ctx.send("next")
+    next_msg_event = MessageCreate(offline_ctx.captured_message)
+    await booru_ext.booru_listener.callback(booru_ext, next_msg_event)
 
     def check(m: MessageCreate):
         return (
-            m.message.author == prefixed_ctx.bot.user
+            m.message.author == offline_ctx.bot.user
             and m.message.content != "next"
-            and m.message.channel == prefixed_ctx.channel
+            and m.message.channel == offline_ctx.channel
         )
 
-    msg = await wait_for_message_or_fetch(prefixed_ctx, check, timeout=10)
+    msg = await wait_for_message_or_fetch(offline_ctx, check, timeout=2)
 
     assert msg.content == "No more results found."
 
     # This should return no response, because the session is over
-    await prefixed_ctx.send("next")
+    await booru_ext.booru_listener.callback(booru_ext, next_msg_event)
 
     # if we try to pull a message, it should only be the last one
-    msg_2 = await fetch_latest_message(prefixed_ctx)
-    assert msg_2.content == "next"
+    # (since we're using offline ctx, the "next" msg is not sent,
+    # and therefore the expected message is the "no more results" msg)
+    msg_2 = await fetch_latest_message(offline_ctx)
+    assert msg_2.content == "No more results found."
 
 
 @pytest.mark.bot

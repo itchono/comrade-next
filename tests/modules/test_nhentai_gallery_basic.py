@@ -1,6 +1,5 @@
 import pytest
 from interactions.api.events import MessageCreate
-from interactions.ext.prefixed_commands import PrefixedContext
 
 from comrade.core.comrade_client import Comrade
 from comrade.lib.testing_utils import (
@@ -42,23 +41,31 @@ async def test_gallery_start(
 
 
 @pytest.mark.bot
-async def test_gallery_next_page_from_init(prefixed_ctx: PrefixedContext):
+async def test_gallery_next_page_from_init(
+    offline_ctx: CapturingContext, nhentai_ext: NHentai
+):
     """
     Test continuity of gallery pages.
     Has to be executed after test_gallery_start.
 
     Uses message response
     """
-    await prefixed_ctx.send("np")
+
+    # create a send message event
+    await offline_ctx.send("np")
+    np_msg_event = MessageCreate(offline_ctx.captured_message)
+    await nhentai_ext.nhentai_gallery_listener.callback(
+        nhentai_ext, np_msg_event
+    )
 
     def check(m: MessageCreate):
         return (
-            m.message.author == prefixed_ctx.bot.user
+            m.message.author == offline_ctx.bot.user
             and m.message.embeds
-            and m.message.channel == prefixed_ctx.channel
+            and m.message.channel == offline_ctx.channel
         )
 
-    msg = await wait_for_message_or_fetch(prefixed_ctx, check, timeout=10)
+    msg = await wait_for_message_or_fetch(offline_ctx, check, timeout=2)
 
     embed = msg.embeds[0]
 
@@ -70,32 +77,34 @@ async def test_gallery_next_page_from_init(prefixed_ctx: PrefixedContext):
 
 
 @pytest.mark.bot
-async def test_gallery_end(
-    capturing_ctx: CapturingContext, nhentai_ext: NHentai
-):
+async def test_gallery_end(offline_ctx: CapturingContext, nhentai_ext: NHentai):
     """
     Test that gallery terminates when we reach the end.
 
     Uses message response, as well as direct button callback.
     """
-    await capturing_ctx.send("np")
+    await offline_ctx.send("np")
+    np_msg_event = MessageCreate(offline_ctx.captured_message)
+    await nhentai_ext.nhentai_gallery_listener.callback(
+        nhentai_ext, np_msg_event
+    )
 
     def check(m: MessageCreate):
         return (
-            m.message.author == capturing_ctx.bot.user
+            m.message.author == offline_ctx.bot.user
             and not m.message.embeds
             and m.message.content != "np"
-            and m.message.channel == capturing_ctx.channel
+            and m.message.channel == offline_ctx.channel
         )
 
-    msg = await wait_for_message_or_fetch(capturing_ctx, check, timeout=10)
+    msg = await wait_for_message_or_fetch(offline_ctx, check, timeout=2)
 
     assert msg.content == "You have reached the end of this work."
 
     # Now try to go to next page, make sure it doesn't work
-    await nhentai_ext.nhentai_np_callback.callback(capturing_ctx)
+    await nhentai_ext.nhentai_np_callback.callback(offline_ctx)
 
-    msg = capturing_ctx.captured_message
+    msg = offline_ctx.captured_message
 
     assert (
         msg.content

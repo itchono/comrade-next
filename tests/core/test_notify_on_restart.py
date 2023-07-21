@@ -26,7 +26,7 @@ async def test_restart_with_notify(bot: Comrade, channel: GuildText):
     msg_event: MessageCreate = await bot.wait_for(
         "message_create",
         timeout=5,
-        checks=lambda m: m.message.author.id == bot.user.id,
+        checks=lambda m: m.message.author == bot.user,
     )
 
     assert msg_event.message.content.startswith(
