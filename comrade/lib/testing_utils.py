@@ -1,12 +1,22 @@
 # Taken from interactions.py tests folder
 import asyncio
+from logging import getLogger
 from typing import Callable, Optional
 
 import discord_typings
-from interactions import BaseContext, Client, Message, Snowflake_Type
+from interactions import (
+    Attachment,
+    BaseContext,
+    Client,
+    File,
+    Message,
+    Snowflake_Type,
+)
 from interactions.api.events import MessageCreate
 from interactions.ext.prefixed_commands import PrefixedContext
 from interactions.models.internal.context import InteractionContext
+
+logger = getLogger(__name__)
 
 
 def SAMPLE_USER_DATA(user_id: Optional[str] = None) -> discord_typings.UserData:
@@ -143,6 +153,12 @@ async def wait_for_message_or_fetch(
     except asyncio.TimeoutError:
         # If the bot has already sent the message and we couldn't see the event
         # fetch the latest message
+
+        logger.warning(
+            f"Timed out waiting for message in {ctx.channel},"
+            "fetching latest message instead."
+        )
+
         return await fetch_latest_message(ctx)
 
 
@@ -183,24 +199,53 @@ class CapturingContext(PrefixedContext):
     This is created by pytest fixtures and monkeypatching
     """
 
-    testing_captured_message: Message
+    captured_message: Message
 
     async def send_and_capture(self, *args, **kwargs) -> Message:
-        self.testing_captured_message = await PrefixedContext.send(
+        self.captured_message = await PrefixedContext.send(
             self, *args, **kwargs
         )
-        return self.testing_captured_message
+        return self.captured_message
 
-    async def fake_send_http_request(self, *args, **kwargs):
+    async def fake_send_http_request(self, *args, **kwargs) -> dict:
         """
         For use with monkeypatching; bypasses the internet
         and instead plugs in a fake response.
+
+        Returns
+        -------
+        dict
+            dictionary containing message data as if it had come from
+            Discord, with some caveats:
+                - message ID is always 123456789012345677
+                - no attachments
         """
         # Extract message payload fields, and patch in any missing ones
-        msg_payload: dict = SAMPLE_MESSAGE_DATA(user_id=self.bot.user.id)
+        msg_payload: dict = SAMPLE_MESSAGE_DATA(
+            user_id=self.bot.user.id,
+            channel_id=self.channel_id,
+            guild_id=self.guild_id,
+        )
         msg_payload.update(args[0])
 
-        self.testing_captured_message = Message.from_dict(
-            msg_payload, self.client
-        )
-        return None
+        # patch in files
+        if "files" in kwargs and kwargs["files"] is not None:
+            if isinstance(kwargs["files"], list):
+                files: list[File] = kwargs["files"]
+
+            else:
+                files: list[File] = [kwargs["files"]]
+
+            msg_payload["attachments"] = [
+                Attachment(
+                    client=self.bot,
+                    id=123456789012345677,
+                    filename=file.file_name,
+                    size=len(file.open_file().read()),
+                    url="https://example.com",
+                    proxy_url="https://example.com",
+                ).to_dict()
+                for file in files
+            ]
+
+        return msg_payload

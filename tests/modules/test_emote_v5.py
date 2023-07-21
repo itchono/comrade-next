@@ -9,17 +9,20 @@ from comrade.lib.testing_utils import (
 
 @pytest.mark.bot
 @pytest.mark.parametrize("emote", ("pssh", "PSSH", " pssh "))
-async def test_sending_emote(ctx: PrefixedContext, emote: str):
+async def test_sending_emote(prefixed_ctx: PrefixedContext, emote: str):
     """
     Tests sending an emote from the bot,
     with both case-sensitive and case-insensitive emote names.
     """
-    await ctx.send(f":{emote}:")
+    await prefixed_ctx.send(f":{emote}:")
 
     def check(m: MessageCreate):
-        return m.message.webhook_id is not None
+        return (
+            m.message.webhook_id is not None
+            and m.message.channel == prefixed_ctx.channel
+        )
 
-    emoji_msg = await wait_for_message_or_fetch(ctx, check, timeout=10)
+    emoji_msg = await wait_for_message_or_fetch(prefixed_ctx, check, timeout=10)
 
     assert (
         emoji_msg.content
@@ -28,13 +31,16 @@ async def test_sending_emote(ctx: PrefixedContext, emote: str):
 
 
 @pytest.mark.bot
-async def test_no_emote(ctx: PrefixedContext):
-    await ctx.send(":pssh2doesnotexist:")
+async def test_no_emote(prefixed_ctx: PrefixedContext):
+    await prefixed_ctx.send(":pssh2doesnotexist:")
 
     def check(m: MessageCreate):
-        return m.message.author.id == ctx.bot.user.id
+        return (
+            m.message.author == prefixed_ctx.bot.user
+            and m.message.channel == prefixed_ctx.channel
+        )
 
-    error_msg = await wait_for_message_or_fetch(ctx, check, timeout=10)
+    error_msg = await wait_for_message_or_fetch(prefixed_ctx, check, timeout=10)
     embed = error_msg.embeds[0]
     assert embed.title == "Emote not found."
     assert (

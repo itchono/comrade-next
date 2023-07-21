@@ -18,14 +18,14 @@ async def booru_ext(bot: Comrade) -> Booru:
 
 @pytest.mark.bot
 async def test_booru_start_gelbooru_single(
-    capturing_ctx: CapturingContext, booru_ext: Booru
+    offline_ctx: CapturingContext, booru_ext: Booru
 ):
     booru_cmd = booru_ext.booru
 
-    await booru_cmd.callback(capturing_ctx, "gelbooru", "id:8435932")
+    await booru_cmd.callback(offline_ctx, "gelbooru", "id:8435932")
 
     # Get latest message in channel
-    embed_msg = capturing_ctx.testing_captured_message
+    embed_msg = offline_ctx.captured_message
 
     embed = embed_msg.embeds[0]
 
@@ -38,37 +38,41 @@ async def test_booru_start_gelbooru_single(
 
 
 @pytest.mark.bot
-async def test_booru_advance_msg(ctx: PrefixedContext):
+async def test_booru_advance_msg(prefixed_ctx: PrefixedContext):
     # starting from the previous test
 
     # The post list should be depleted now
-    await ctx.send("next")
+    await prefixed_ctx.send("next")
 
     def check(m: MessageCreate):
-        return m.message.author == ctx.bot.user and m.message.content != "next"
+        return (
+            m.message.author == prefixed_ctx.bot.user
+            and m.message.content != "next"
+            and m.message.channel == prefixed_ctx.channel
+        )
 
-    msg = await wait_for_message_or_fetch(ctx, check, timeout=10)
+    msg = await wait_for_message_or_fetch(prefixed_ctx, check, timeout=10)
 
     assert msg.content == "No more results found."
 
     # This should return no response, because the session is over
-    await ctx.send("next")
+    await prefixed_ctx.send("next")
 
     # if we try to pull a message, it should only be the last one
-    msg_2 = await fetch_latest_message(ctx)
+    msg_2 = await fetch_latest_message(prefixed_ctx)
     assert msg_2.content == "next"
 
 
 @pytest.mark.bot
 async def test_booru_start_danbooru_single(
-    capturing_ctx: CapturingContext, booru_ext: Booru
+    offline_ctx: CapturingContext, booru_ext: Booru
 ):
     booru_cmd = booru_ext.booru
 
-    await booru_cmd.callback(capturing_ctx, "danbooru", "id:6223033")
+    await booru_cmd.callback(offline_ctx, "danbooru", "id:6223033")
 
     # Get latest message in channel
-    embed_msg = capturing_ctx.testing_captured_message
+    embed_msg = offline_ctx.captured_message
 
     embed = embed_msg.embeds[0]
 
@@ -82,32 +86,32 @@ async def test_booru_start_danbooru_single(
 
 @pytest.mark.bot
 async def test_booru_advance_callback(
-    capturing_ctx: CapturingContext, booru_ext: Booru
+    offline_ctx: CapturingContext, booru_ext: Booru
 ):
     # Try advancing using callback
-    await booru_ext.booru_next_callback(capturing_ctx)
+    await booru_ext.booru_next_callback(offline_ctx)
 
-    msg = capturing_ctx.testing_captured_message
+    msg = offline_ctx.captured_message
     assert msg.content == "No more results found."
 
-    await booru_ext.booru_next_callback(capturing_ctx)
+    await booru_ext.booru_next_callback(offline_ctx)
 
-    err_msg = capturing_ctx.testing_captured_message
+    err_msg = offline_ctx.captured_message
     assert "This button was probably created in the past" in err_msg.content
 
 
 @pytest.mark.bot
 async def test_booru_gelbooru_multi(
-    capturing_ctx: CapturingContext, booru_ext: Booru
+    offline_ctx: CapturingContext, booru_ext: Booru
 ):
     booru_cmd = booru_ext.booru
 
-    await booru_cmd.callback(capturing_ctx, "gelbooru", "tsushima_yoshiko")
+    await booru_cmd.callback(offline_ctx, "gelbooru", "tsushima_yoshiko")
 
     # Advance to the next page and make sure we have a post
-    await booru_ext.booru_next_callback(capturing_ctx)
+    await booru_ext.booru_next_callback(offline_ctx)
 
-    embed_msg = capturing_ctx.testing_captured_message
+    embed_msg = offline_ctx.captured_message
     embed = embed_msg.embeds[0]
     assert (
         embed.footer.text
@@ -117,7 +121,7 @@ async def test_booru_gelbooru_multi(
 
 @pytest.mark.bot
 async def test_autocomplete_gelbooru_nominal(
-    ctx: PrefixedContext,
+    prefixed_ctx: PrefixedContext,
     booru_ext: Booru,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -129,14 +133,14 @@ async def test_autocomplete_gelbooru_nominal(
 
     with monkeypatch.context() as m:
         m.setattr(
-            ctx,
+            prefixed_ctx,
             "kwargs",
             {"booru_name": "gelbooru", "tags": "tsushima_"},
         )
-        m.setattr(ctx, "send", monkeypatched_send)
+        m.setattr(prefixed_ctx, "send", monkeypatched_send)
 
         # execute the autocomplete request
-        await booru_ext.tags_autocomplete(ctx)
+        await booru_ext.tags_autocomplete(prefixed_ctx)
 
         # check
         suggestions = tags[0]
@@ -147,32 +151,7 @@ async def test_autocomplete_gelbooru_nominal(
 
 @pytest.mark.bot
 async def test_autocomplete_blank(
-    ctx: PrefixedContext,
-    booru_ext: Booru,
-    monkeypatch: pytest.MonkeyPatch,
-):
-    tags = []
-
-    # capture the tags that are sent
-    async def monkeypatched_send(*args, **kwargs):
-        tags.append(args[0])
-
-    with monkeypatch.context() as m:
-        m.setattr(ctx, "kwargs", {"booru_name": "gelbooru", "tags": ""})
-        m.setattr(ctx, "send", monkeypatched_send)
-
-        # execute the autocomplete request
-        await booru_ext.tags_autocomplete(ctx)
-
-        # check
-        suggestions = tags[0]
-
-        assert suggestions == ["(Start typing to get tag suggestions)"]
-
-
-@pytest.mark.bot
-async def test_autocomplete_no_suggestion(
-    ctx: PrefixedContext,
+    prefixed_ctx: PrefixedContext,
     booru_ext: Booru,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -184,14 +163,41 @@ async def test_autocomplete_no_suggestion(
 
     with monkeypatch.context() as m:
         m.setattr(
-            ctx,
+            prefixed_ctx, "kwargs", {"booru_name": "gelbooru", "tags": ""}
+        )
+        m.setattr(prefixed_ctx, "send", monkeypatched_send)
+
+        # execute the autocomplete request
+        await booru_ext.tags_autocomplete(prefixed_ctx)
+
+        # check
+        suggestions = tags[0]
+
+        assert suggestions == ["(Start typing to get tag suggestions)"]
+
+
+@pytest.mark.bot
+async def test_autocomplete_no_suggestion(
+    prefixed_ctx: PrefixedContext,
+    booru_ext: Booru,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    tags = []
+
+    # capture the tags that are sent
+    async def monkeypatched_send(*args, **kwargs):
+        tags.append(args[0])
+
+    with monkeypatch.context() as m:
+        m.setattr(
+            prefixed_ctx,
             "kwargs",
             {"booru_name": "gelbooru", "tags": "qwertyuiopasdfghjklzxcvbnm"},
         )
-        m.setattr(ctx, "send", monkeypatched_send)
+        m.setattr(prefixed_ctx, "send", monkeypatched_send)
 
         # execute the autocomplete request
-        await booru_ext.tags_autocomplete(ctx)
+        await booru_ext.tags_autocomplete(prefixed_ctx)
 
         # check
         suggestions = tags[0]

@@ -10,7 +10,7 @@ from comrade.lib.testing_utils import CapturingContext, generate_dummy_context
 
 
 @pytest.fixture(scope="module")
-async def ctx(bot: Client, channel: GuildText) -> PrefixedContext:
+async def prefixed_ctx(bot: Client, channel: GuildText) -> PrefixedContext:
     """
     Generic PrefixedContext fixture,
     for commands which do not require any special
@@ -36,40 +36,57 @@ async def ctx(bot: Client, channel: GuildText) -> PrefixedContext:
 
 @pytest.fixture(scope="function")
 async def capturing_ctx(
-    ctx: PrefixedContext,
+    prefixed_ctx: PrefixedContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> CapturingContext:
     """
     Patched version of ctx which captures the message
     after sending it to discord.
-    it into a `testing_captured_message` attribute.
+    it into a `captured_message` attribute.
 
-    TODO: try to intercept the message before it's sent to discord
+    Sends the message to Discord as normal.
+    (requires HTTP request to Discord)
     """
     with monkeypatch.context() as m:
-        m.setattr(ctx, "send", CapturingContext.send_and_capture.__get__(ctx))
-        yield ctx
+        m.setattr(
+            prefixed_ctx,
+            "send",
+            CapturingContext.send_and_capture.__get__(prefixed_ctx),
+        )
+        yield prefixed_ctx
 
 
 @pytest.fixture(scope="function")
 async def offline_ctx(
-    ctx: PrefixedContext,
+    prefixed_ctx: PrefixedContext,
     monkeypatch: pytest.MonkeyPatch,
 ) -> CapturingContext:
     """
     Patched version of ctx which captures the message
     after sending it to discord.
-    it into a `testing_captured_message` attribute.
+    it into a `captured_message` attribute.
 
     Also bypasses the HTTP request process to discord,
-    useful for testing simple commands which do not
-    require followups.
+    useful for testing certain simple cases.
+    *Considerably faster than `capturing_ctx` and `ctx`*
+
+    USABLE FOR:
+    - message content
+    - embeds
+    - attachments if you're not downloading them
+
+    NOT USABLE IF YOU NEED TO TEST:
+    - attachments with downloaded file contents
     """
     with monkeypatch.context() as m:
-        m.setattr(ctx, "send", CapturingContext.send_and_capture.__get__(ctx))
         m.setattr(
-            ctx,
-            "_send_http_request",
-            CapturingContext.fake_send_http_request.__get__(ctx),
+            prefixed_ctx,
+            "send",
+            CapturingContext.send_and_capture.__get__(prefixed_ctx),
         )
-        yield ctx
+        m.setattr(
+            prefixed_ctx,
+            "_send_http_request",
+            CapturingContext.fake_send_http_request.__get__(prefixed_ctx),
+        )
+        yield prefixed_ctx

@@ -1,5 +1,6 @@
 import pytest
 from interactions.api.events import MessageCreate
+from interactions.ext.prefixed_commands import PrefixedContext
 
 from comrade.core.comrade_client import Comrade
 from comrade.lib.testing_utils import (
@@ -16,14 +17,14 @@ async def nhentai_ext(bot: Comrade) -> NHentai:
 
 @pytest.mark.bot
 async def test_gallery_start(
-    capturing_ctx: CapturingContext, nhentai_ext: NHentai
+    offline_ctx: CapturingContext, nhentai_ext: NHentai
 ):
     nhentai_gallery_cmd = nhentai_ext.nhentai_gallery
 
-    await nhentai_gallery_cmd.callback(capturing_ctx, 266745)
+    await nhentai_gallery_cmd.callback(offline_ctx, 266745)
 
     # Get latest message in channel
-    start_embed_msg = capturing_ctx.testing_captured_message
+    start_embed_msg = offline_ctx.captured_message
     assert (
         start_embed_msg.content
         == "Type `np` (or click the buttons) to start reading, and advance pages."
@@ -41,19 +42,23 @@ async def test_gallery_start(
 
 
 @pytest.mark.bot
-async def test_gallery_next_page_from_init(ctx: CapturingContext):
+async def test_gallery_next_page_from_init(prefixed_ctx: PrefixedContext):
     """
     Test continuity of gallery pages.
     Has to be executed after test_gallery_start.
 
     Uses message response
     """
-    await ctx.send("np")
+    await prefixed_ctx.send("np")
 
     def check(m: MessageCreate):
-        return m.message.author == ctx.bot.user and m.message.embeds
+        return (
+            m.message.author == prefixed_ctx.bot.user
+            and m.message.embeds
+            and m.message.channel == prefixed_ctx.channel
+        )
 
-    msg = await wait_for_message_or_fetch(ctx, check, timeout=10)
+    msg = await wait_for_message_or_fetch(prefixed_ctx, check, timeout=10)
 
     embed = msg.embeds[0]
 
@@ -80,6 +85,7 @@ async def test_gallery_end(
             m.message.author == capturing_ctx.bot.user
             and not m.message.embeds
             and m.message.content != "np"
+            and m.message.channel == capturing_ctx.channel
         )
 
     msg = await wait_for_message_or_fetch(capturing_ctx, check, timeout=10)
@@ -89,7 +95,7 @@ async def test_gallery_end(
     # Now try to go to next page, make sure it doesn't work
     await nhentai_ext.nhentai_np_callback.callback(capturing_ctx)
 
-    msg = capturing_ctx.testing_captured_message
+    msg = capturing_ctx.captured_message
 
     assert (
         msg.content

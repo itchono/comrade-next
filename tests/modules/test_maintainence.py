@@ -18,7 +18,7 @@ async def maintainence_ext(bot: Comrade) -> Maintainence:
 
 @pytest.mark.bot
 async def test_restart(
-    capturing_ctx: CapturingContext,
+    offline_ctx: CapturingContext,
     maintainence_ext: Maintainence,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -41,16 +41,16 @@ async def test_restart(
         m.setattr(subprocess, "check_output", fake_subproc_check_output)
 
         # IMPORTANT: PREVENT THE BOT FROM ACTUALLY STOPPING
-        m.setattr(capturing_ctx.bot, "stop", bot_stop)
+        m.setattr(offline_ctx.bot, "stop", bot_stop)
 
-        await restart_cmd.callback(capturing_ctx)
+        await restart_cmd.callback(offline_ctx)
 
         assert "--notify_channel" in stored_args[0][1]
 
 
 @pytest.mark.bot
 async def test_check_updates(
-    capturing_ctx: CapturingContext,
+    offline_ctx: CapturingContext,
     maintainence_ext: Maintainence,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -69,15 +69,15 @@ async def test_check_updates(
         m.setattr(os, "execv", mock_execv)
         m.setattr(subprocess, "check_output", fake_subproc_check_output)
 
-        await check_cmd.callback(capturing_ctx)
+        await check_cmd.callback(offline_ctx)
 
-        msg = capturing_ctx.testing_captured_message
+        msg = offline_ctx.captured_message
         assert "No updates available." in msg.content
 
 
 @pytest.mark.bot
 async def test_install_updates(
-    capturing_ctx: CapturingContext,
+    offline_ctx: CapturingContext,
     maintainence_ext: Maintainence,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -100,8 +100,8 @@ async def test_install_updates(
         m.setattr(subprocess, "check_output", fake_subproc_check_output)
 
         # IMPORTANT: PREVENT THE BOT FROM ACTUALLY STOPPING
-        m.setattr(capturing_ctx.bot, "stop", bot_stop)
+        m.setattr(offline_ctx.bot, "stop", bot_stop)
 
-        await update_cmd.callback(capturing_ctx)
+        await update_cmd.callback(offline_ctx)
 
         assert "--notify_channel" in stored_args[0][1]
