@@ -31,7 +31,7 @@ async def test_search_start(
         capturing_ctx, "alp love live", NHentaiSortOrder.POPULAR_ALL_TIME
     )
 
-    start_msg = capturing_ctx.testing_captured_message
+    start_msg = capturing_ctx.captured_message
 
     assert start_msg.content == (
         "175+ results found for query `alp love live`\n"
@@ -59,7 +59,7 @@ async def test_search_next_page(
     We need to do some low-level bot hacking to get the event dispatcher
     to call the callback directly.
     """
-    menu_msg_old = capturing_ctx.testing_captured_message
+    menu_msg_old = capturing_ctx.captured_message
     action_row = menu_msg_old.components[1]
     page_2_button: Button = action_row.components[1]
 
@@ -84,7 +84,7 @@ async def test_search_next_page(
         )
         await callback(capturing_ctx)
 
-    menu_msg = capturing_ctx.testing_captured_message
+    menu_msg = capturing_ctx.captured_message
 
     assert menu_msg.content == (
         "175+ results found for query `alp love live`\n"
@@ -103,7 +103,7 @@ async def test_search_last_page(
     We need to do some low-level bot hacking to get the event dispatcher
     to call the callback directly.
     """
-    menu_msg_old = capturing_ctx.testing_captured_message
+    menu_msg_old = capturing_ctx.captured_message
     action_row = menu_msg_old.components[1]
     last_page_button: Button = action_row.components[-1]
 
@@ -131,7 +131,7 @@ async def test_search_last_page(
         )
         await callback(capturing_ctx)
 
-    menu_msg = capturing_ctx.testing_captured_message
+    menu_msg = capturing_ctx.captured_message
 
     assert menu_msg.content == (
         "175+ results found for query `alp love live`\n"
@@ -149,7 +149,7 @@ async def test_same_page(
 
     The bot should handle this gracefully, and print a message
     """
-    menu_msg_old = capturing_ctx.testing_captured_message
+    menu_msg_old = capturing_ctx.captured_message
     action_row = menu_msg_old.components[1]
     last_page_button: Button = action_row.components[-1]
 
@@ -178,5 +178,5 @@ async def test_same_page(
         )
         await callback(capturing_ctx)
 
-    menu_msg = capturing_ctx.testing_captured_message
+    menu_msg = capturing_ctx.captured_message
     assert menu_msg.content == "You're already on that page!"

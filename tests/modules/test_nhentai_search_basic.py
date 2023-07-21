@@ -19,7 +19,7 @@ async def nhentai_ext(bot: Comrade) -> NHentai:
 
 @pytest.mark.bot
 async def test_search_start(
-    capturing_ctx: CapturingContext, nhentai_ext: NHentai
+    offline_ctx: CapturingContext, nhentai_ext: NHentai
 ):
     """
     Make sure that we can find a gallery from search.
@@ -31,12 +31,12 @@ async def test_search_start(
     nhentai_search_cmd = nhentai_ext.nhentai_search
 
     await nhentai_search_cmd.callback(
-        capturing_ctx,
+        offline_ctx,
         "alp love live english kurosawa",
         NHentaiSortOrder.POPULAR_ALL_TIME,
     )
 
-    start_msg = capturing_ctx.testing_captured_message
+    start_msg = offline_ctx.captured_message
     assert start_msg.content == (
         "3 result(s) found for query `alp love live english kurosawa`\n"
         "Select a gallery to view (Page 1 / 1)"
@@ -57,7 +57,7 @@ async def test_search_start(
 
 @pytest.mark.bot
 async def test_search_click(
-    capturing_ctx: CapturingContext,
+    offline_ctx: CapturingContext,
     nhentai_ext: NHentai,
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -66,10 +66,10 @@ async def test_search_click(
     """
 
     with monkeypatch.context() as m:
-        m.setattr(capturing_ctx, "values", ["388445"], raising=False)
-        await nhentai_ext.nhentai_search_callback.callback(capturing_ctx)
+        m.setattr(offline_ctx, "values", ["388445"], raising=False)
+        await nhentai_ext.nhentai_search_callback.callback(offline_ctx)
 
-    start_embed_msg = capturing_ctx.testing_captured_message
+    start_embed_msg = offline_ctx.captured_message
     assert (
         start_embed_msg.content
         == "Type `np` (or click the buttons) to start reading, and advance pages."

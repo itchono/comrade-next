@@ -67,7 +67,7 @@ def event_loop():
         if pending_tasks:
             # give the tasks a timeout of 30 seconds
             # to finish before we cancel them
-            futures = asyncio.wait(pending_tasks, timeout=30)
+            futures = asyncio.wait(pending_tasks, timeout=20)
 
             loop.run_until_complete(futures)
 

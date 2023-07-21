@@ -15,8 +15,8 @@ async def rolemanager_ext(bot: Comrade) -> RoleManager:
 
 
 @pytest.fixture(scope="module")
-async def temp_role(ctx: PrefixedContext) -> Role:
-    role = await ctx.guild.create_role(name="rolemanager test")
+async def temp_role(prefixed_ctx: PrefixedContext) -> Role:
+    role = await prefixed_ctx.guild.create_role(name="rolemanager test")
 
     yield role
 
@@ -25,7 +25,7 @@ async def temp_role(ctx: PrefixedContext) -> Role:
 
 @pytest.mark.bot
 async def test_nothing_joinable(
-    capturing_ctx: CapturingContext, rolemanager_ext: RoleManager
+    offline_ctx: CapturingContext, rolemanager_ext: RoleManager
 ):
     """
     Check that /roles returns nothing
@@ -33,16 +33,16 @@ async def test_nothing_joinable(
 
     roles_cmd = rolemanager_ext.list_roles
 
-    await roles_cmd.callback(capturing_ctx)
+    await roles_cmd.callback(offline_ctx)
 
-    msg = capturing_ctx.testing_captured_message
+    msg = offline_ctx.captured_message
 
     assert msg.content == "There are no joinable roles in this server"
 
 
 @pytest.mark.bot
 async def test_mark_joinable(
-    capturing_ctx: CapturingContext,
+    offline_ctx: CapturingContext,
     rolemanager_ext: RoleManager,
     temp_role: Role,
 ):
@@ -51,16 +51,16 @@ async def test_mark_joinable(
     """
 
     mark_joinable_cmd = rolemanager_ext.mark_joinable
-    await mark_joinable_cmd.callback(capturing_ctx, temp_role)
+    await mark_joinable_cmd.callback(offline_ctx, temp_role)
 
-    msg = capturing_ctx.testing_captured_message
+    msg = offline_ctx.captured_message
 
     assert "as joinable" in msg.content
 
 
 @pytest.mark.bot
 async def test_cannot_double_mark(
-    capturing_ctx: CapturingContext,
+    offline_ctx: CapturingContext,
     rolemanager_ext: RoleManager,
     temp_role: Role,
 ):
@@ -68,16 +68,16 @@ async def test_cannot_double_mark(
     Check that we cannot mark a role as joinable twice
     """
     mark_joinable_cmd = rolemanager_ext.mark_joinable
-    await mark_joinable_cmd.callback(capturing_ctx, temp_role)
+    await mark_joinable_cmd.callback(offline_ctx, temp_role)
 
-    msg = capturing_ctx.testing_captured_message
+    msg = offline_ctx.captured_message
 
     assert "is already joinable" in msg.content
 
 
 @pytest.mark.bot
 async def test_unmark_joinable(
-    capturing_ctx: CapturingContext,
+    offline_ctx: CapturingContext,
     rolemanager_ext: RoleManager,
     temp_role: Role,
 ):
@@ -85,16 +85,16 @@ async def test_unmark_joinable(
     Check that we can unmark a role as joinable
     """
     unmark_joinable_cmd = rolemanager_ext.unmark_joinable
-    await unmark_joinable_cmd.callback(capturing_ctx, temp_role)
+    await unmark_joinable_cmd.callback(offline_ctx, temp_role)
 
-    msg = capturing_ctx.testing_captured_message
+    msg = offline_ctx.captured_message
 
     assert "as joinable" in msg.content
 
 
 @pytest.mark.bot
 async def test_cannot_unmark_nonexistent(
-    capturing_ctx: CapturingContext,
+    offline_ctx: CapturingContext,
     rolemanager_ext: RoleManager,
     temp_role: Role,
 ):
@@ -102,48 +102,46 @@ async def test_cannot_unmark_nonexistent(
     Check that we cannot unmark a role that is not marked as joinable
     """
     unmark_joinable_cmd = rolemanager_ext.unmark_joinable
-    await unmark_joinable_cmd.callback(capturing_ctx, temp_role)
+    await unmark_joinable_cmd.callback(offline_ctx, temp_role)
 
-    msg = capturing_ctx.testing_captured_message
+    msg = offline_ctx.captured_message
 
     assert "is not joinable" in msg.content
 
 
 @pytest.mark.bot
 async def test_del_removed_roles_no_op(
-    capturing_ctx: CapturingContext, rolemanager_ext: RoleManager
+    offline_ctx: CapturingContext, rolemanager_ext: RoleManager
 ):
     # first, check that no roles need to be deleted
-    await rolemanager_ext.del_removed_roles.callback(capturing_ctx)
-    msg = capturing_ctx.testing_captured_message
+    await rolemanager_ext.del_removed_roles.callback(offline_ctx)
+    msg = offline_ctx.captured_message
 
     assert msg.content == "No roles to delete"
 
 
 @pytest.mark.bot
 async def test_del_removed_roles_nominal(
-    capturing_ctx: CapturingContext, rolemanager_ext: RoleManager
+    offline_ctx: CapturingContext, rolemanager_ext: RoleManager
 ):
-    temp_role_2 = await capturing_ctx.guild.create_role(
-        name="rolemanager test 2"
-    )
+    temp_role_2 = await offline_ctx.guild.create_role(name="rolemanager test 2")
 
     # Mark a role as joinable, delete it, and check that it is deleted
     mark_joinable_cmd = rolemanager_ext.mark_joinable
-    await mark_joinable_cmd.callback(capturing_ctx, temp_role_2)
+    await mark_joinable_cmd.callback(offline_ctx, temp_role_2)
 
     await temp_role_2.delete()
 
-    await rolemanager_ext.del_removed_roles.callback(capturing_ctx)
+    await rolemanager_ext.del_removed_roles.callback(offline_ctx)
 
-    msg = capturing_ctx.testing_captured_message
+    msg = offline_ctx.captured_message
 
     assert "removed roles" in msg.content
 
 
 @pytest.mark.bot
 async def test_role_menu(
-    capturing_ctx: CapturingContext,
+    offline_ctx: CapturingContext,
     rolemanager_ext: RoleManager,
     temp_role: Role,
 ):
@@ -151,13 +149,13 @@ async def test_role_menu(
     Check that /roles returns a menu now
     """
     mark_joinable_cmd = rolemanager_ext.mark_joinable
-    await mark_joinable_cmd.callback(capturing_ctx, temp_role)
+    await mark_joinable_cmd.callback(offline_ctx, temp_role)
 
     roles_cmd = rolemanager_ext.list_roles
 
-    await roles_cmd.callback(capturing_ctx)
+    await roles_cmd.callback(offline_ctx)
 
-    msg = capturing_ctx.testing_captured_message
+    msg = offline_ctx.captured_message
 
     assert msg.components[0].type == ComponentType.ACTION_ROW
     assert msg.components[0].components[0].type == ComponentType.STRING_SELECT

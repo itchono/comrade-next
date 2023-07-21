@@ -8,8 +8,8 @@ from interactions import (
     File,
     Guild,
     GuildText,
-    Listener,
     Message,
+    listen,
 )
 from interactions.api.events import MessageCreate
 from pymongo.collection import Collection
@@ -66,7 +66,7 @@ class Relay(RelayCacheMixin):
         self.guild = guild
         self.blob_storage_collection = blob_storage_collection
 
-        @Listener.create(event_name="message_create")
+        @listen(event_name="message_create")
         async def relay_msg_callback(event: MessageCreate):
             msg = event.message
             if msg._channel_id == self.relay_channel.id:
