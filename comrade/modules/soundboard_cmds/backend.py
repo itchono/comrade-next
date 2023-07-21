@@ -118,6 +118,9 @@ class SoundboardBackend:
         SoundboardAudio
             The created SoundboardAudio instance
         """
+        # sanity check: make sure the name is not already taken
+        if self.bot.db.soundboardSounds.find_one({"name": name}) is not None:
+            raise ValueError("Name is already taken")
 
         # triage URL based on domain
         parsed_url = urlparse(url)
@@ -132,7 +135,9 @@ class SoundboardBackend:
             mp3_file = download_video_to_mp3(url, limit_time=15)
 
             # clone the blob to relay
-            doc = await self.bot.relay.create_blob_from_bytes(mp3_file)
+            doc = await self.bot.relay.create_blob_from_bytes(
+                mp3_file, filename=f"{name}.mp3"
+            )
         # any other domain
         else:
             # get the mime type
