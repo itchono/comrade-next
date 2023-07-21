@@ -29,14 +29,14 @@ class Soundboard(Extension, SoundboardBackend):
         dm_permission=False,
     )
     @slash_option(
-        name="url",
-        description="Youtube URL to download sound from, or link to a sound file",
+        name="name",
+        description="The name of the sound",
         required=True,
         opt_type=OptionType.STRING,
     )
     @slash_option(
-        name="name",
-        description="The name of the sound",
+        name="url",
+        description="Youtube URL to download sound from, or link to a sound file",
         required=True,
         opt_type=OptionType.STRING,
     )
@@ -47,12 +47,22 @@ class Soundboard(Extension, SoundboardBackend):
         opt_type=OptionType.STRING,
     )
     async def soundboard_add_sound(
-        self, ctx: SlashContext, url: str, name: str, emoji: str = None
+        self, ctx: SlashContext, name: str, url: str, emoji: str = None
     ):
-        await ctx.defer()
-        audio = await self.create_soundboard_audio(ctx, url, name, emoji)
+        # make sure url and name weren't reversed
+        if not url.startswith("http") and name.startswith("http"):
+            await ctx.send(
+                "You probably reversed the url and name arguments."
+                f"You tried to add a sound with the name `{name}` and the url `{url}`."
+            )
+            return
 
-        await ctx.send(f"Soundboard audio `{audio.name}` added.")
+        await ctx.defer()
+        try:
+            audio = await self.create_soundboard_audio(ctx, url, name, emoji)
+            await ctx.send(f"Soundboard audio `{audio.name}` added.")
+        except ValueError as e:
+            await ctx.send(f"Could not add sound `{name}`: {e}")
 
     @slash_command(
         name="soundboard",
@@ -143,7 +153,7 @@ class Soundboard(Extension, SoundboardBackend):
         if ctx.voice_state is None:
             await ctx.send(
                 "Not connected to a voice channel."
-                " Call /soundboard connect to start the soundboard.",
+                " Run /soundboard connect to start the soundboard.",
                 ephemeral=True,
             )
             return
