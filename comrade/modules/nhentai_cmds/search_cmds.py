@@ -1,6 +1,7 @@
 import re
 from typing import Awaitable, Callable
 
+from aiohttp import ClientResponseError
 from interactions import (
     SELECT_MAX_NAME_LENGTH,
     ActionRow,
@@ -17,14 +18,15 @@ from interactions import (
 
 from comrade.lib.discord_utils import DynamicPaginator, context_id
 from comrade.lib.nhentai.page_parser import (
-    has_search_results_soup,
     parse_maximum_search_pages,
     parse_search_result_from_page,
 )
 from comrade.lib.nhentai.search import get_search_page
 from comrade.lib.nhentai.structures import (
+    InvalidProxyError,
     NHentaiSearchSession,
     NHentaiSortOrder,
+    PageParsingError,
 )
 from comrade.lib.text_utils import text_safe_length
 
@@ -63,12 +65,18 @@ class NHSearchHandler(NHGalleryInit):
     ):
         await ctx.defer()  # manually defer, to avoid auto-defer causing issues
 
-        page = await get_search_page(
-            query, 1, self.bot.http_session, sort_order
-        )
-
-        if not has_search_results_soup(page.soup):
+        try:
+            page = await get_search_page(
+                query, 1, self.bot.http_session, sort_order
+            )
+        except InvalidProxyError:
+            return await ctx.send(
+                "No NHentai proxies returned a valid response"
+            )
+        except PageParsingError:
             return await ctx.send(f"No results found for query `{query}`.")
+        except ClientResponseError:
+            return await ctx.send("HTTP requests to proxies failed.")
 
         nh_search_result = parse_search_result_from_page(page)
 

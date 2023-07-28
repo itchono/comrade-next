@@ -1,18 +1,22 @@
-from urllib.parse import quote, quote_plus
+from logging import getLogger
 
 import aiohttp
 import bs4
 
 from comrade.lib.nhentai.page_parser import (
-    is_valid_gallery_soup,
-    is_valid_search_soup,
+    raise_for_gallery_soup,
+    raise_for_search_soup,
 )
+from comrade.lib.nhentai.proxies import NHentaiWebProxy
+from comrade.lib.nhentai.sources import ORDERED_SOURCES
 from comrade.lib.nhentai.structures import (
+    InvalidProxyError,
     NHentaiSortOrder,
     NHentaiWebPage,
-    NoPageFoundError,
+    PageParsingError,
 )
-from comrade.lib.nhentai.urls import ORDERED_PROXIES
+
+logger = getLogger(__name__)
 
 
 async def get_gallery_page(
@@ -37,24 +41,42 @@ async def get_gallery_page(
         NamedTuple containing the proxy used to access the page, and the BeautifulSoup
         object representing the HTML content of the page.
 
+    Raises
+    ------
+    InvalidProxyError
+        If the proxy itself is invalid.
+    PageParsingError
+        If the gallery itself is invalid.
+    aiohttp.ClientResponseError
+        If the proxy returns a non-200 response, e.g. internet is down
     """
+    exception_frame: Exception = None
 
-    for name, proxy_url_base in ORDERED_PROXIES.items():
-        # Construct the URL to the gallery
-        # e.g. nhentai.net/g/185217
-        req_url = f"{proxy_url_base}/g/{gallery_num}"
+    logger.info(f"Retrieving gallery page for {gallery_num}")
 
-        async with http_session.get(req_url) as response:
-            html = await response.text()
+    for proxy in ORDERED_SOURCES:
+        try:
+            html = await proxy.retrieve_gallery_page(http_session, gallery_num)
+        except aiohttp.ClientResponseError as e:
+            exception_frame = e
+            continue
 
         soup = bs4.BeautifulSoup(
             html, "lxml"
         )  # lxml is faster than html.parser
 
-        if is_valid_gallery_soup(soup):
-            return NHentaiWebPage(name, soup)
+        try:
+            raise_for_gallery_soup(soup)
+        except (InvalidProxyError, PageParsingError) as e:
+            exception_frame = e
 
-    raise NoPageFoundError("No valid proxies found")
+            logger.warning(f"Proxy {proxy.name} failed: {e}")
+            continue
+        else:
+            logger.debug(f"Proxy {proxy.name} succeeded")
+            return NHentaiWebPage(proxy.name, soup)
+
+    raise exception_frame
 
 
 async def get_search_page(
@@ -66,6 +88,8 @@ async def get_search_page(
     """
     Gets the HTML content of the NHentai search page, given
     a search query.
+
+    Cycles through the proxies in ORDERED_PROXIES until one works.
 
     Parameters
     ----------
@@ -84,33 +108,38 @@ async def get_search_page(
     NHentaiWebPage
         NamedTuple containing the proxy used to access the page, and the BeautifulSoup
         object representing the HTML content of the page.
+
+    Raises
+    ------
+
     """
-    # Encode the search query so that it can be used in a URL
-    # e.g. "alp love live" -> "alp+love+live"
-    encoded_search_query = quote_plus(search_query)
+    exception_frame: Exception = None
 
-    # Currently, only the Google Translate Proxy is useful for searches
-    proxy_name = "Google Translate Proxy"
-    proxy_url_base = ORDERED_PROXIES[proxy_name]
+    for proxy in ORDERED_SOURCES:
+        # Use only instances of NHentaiProxy
+        if not isinstance(proxy, NHentaiWebProxy):
+            continue
 
-    # url-encode everything to make it compatible with Google Translate
-    encoded_search_query = quote(encoded_search_query)
-    ampersand = quote("&")
+        try:
+            html = await proxy.retrieve_search_page(
+                http_session, search_query, pagenum, sort_order
+            )
+        except aiohttp.ClientResponseError as e:
+            exception_frame = e
+            continue
 
-    # Construct the URL to the gallery
-    # e.g. nhentai.net/search/?q=alp+love+live
-    req_url = (
-        f"{proxy_url_base}/search/?q={encoded_search_query}"
-        f"{ampersand}page={pagenum}"
-        f"{ampersand}{sort_order.value}"
-    )
+        soup = bs4.BeautifulSoup(
+            html, "lxml"
+        )  # lxml is faster than html.parser
 
-    async with http_session.get(req_url) as response:
-        html = await response.text()
+        try:
+            raise_for_search_soup(soup)
+        except (InvalidProxyError, PageParsingError) as e:
+            exception_frame = e
+            logger.warning(f"Proxy {proxy.name} failed: {e}")
+            continue
+        else:
+            logger.debug(f"Proxy {proxy.name} succeeded")
+            return NHentaiWebPage(proxy.name, soup)
 
-    soup = bs4.BeautifulSoup(html, "lxml")  # lxml is faster than html.parser
-
-    if is_valid_search_soup(soup):
-        return NHentaiWebPage(proxy_name, soup)
-
-    raise NoPageFoundError("Could not get a valid search page")
+    raise exception_frame

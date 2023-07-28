@@ -2,17 +2,15 @@ import aiohttp
 import pytest
 
 from comrade.lib.nhentai.page_parser import (
-    has_search_results_soup,
-    is_valid_gallery_soup,
     parse_gallery_from_page,
     parse_maximum_search_pages,
     parse_search_result_from_page,
 )
 from comrade.lib.nhentai.search import get_gallery_page, get_search_page
 from comrade.lib.nhentai.structures import (
+    InvalidProxyError,
     NHentaiGallerySession,
-    NoPageFoundError,
-    NoSearchResultsError,
+    PageParsingError,
 )
 from comrade.lib.nhentai.text_filters import filter_title_text
 
@@ -89,7 +87,6 @@ async def test_gallery_acquisition_nominal(
     page = await get_gallery_page(gallery_id, http_session)
 
     assert page.provider == "nhentai.to Mirror"
-    assert is_valid_gallery_soup(page.soup)
 
     gallery = parse_gallery_from_page(page)
 
@@ -137,7 +134,7 @@ async def test_not_present_anywhere(http_session: aiohttp.ClientSession):
     """
     gallery_id = -1
 
-    with pytest.raises(NoPageFoundError):
+    with pytest.raises((PageParsingError, InvalidProxyError)):
         await get_gallery_page(gallery_id, http_session)
 
 
@@ -147,9 +144,7 @@ async def test_gallery_not_on_nhentai_to(http_session: aiohttp.ClientSession):
 
     page = await get_gallery_page(gallery_id, http_session)
 
-    assert page.provider == "Google Translate Proxy"
-
-    assert is_valid_gallery_soup(page.soup)
+    assert page.provider != "nhentai.to Mirror"
 
     gallery = parse_gallery_from_page(page)
 
@@ -219,10 +214,5 @@ async def test_search_last_page(http_session: aiohttp.ClientSession):
 async def test_search_negative(http_session: aiohttp.ClientSession):
     search_query = "this should not exist"
 
-    page = await get_search_page(search_query, 1, http_session)
-    assert not has_search_results_soup(page.soup)
-
-    with pytest.raises(NoSearchResultsError):
-        parse_maximum_search_pages(page)
-    with pytest.raises(NoSearchResultsError):
-        parse_search_result_from_page(page)
+    with pytest.raises((PageParsingError, InvalidProxyError)):
+        await get_search_page(search_query, 1, http_session)

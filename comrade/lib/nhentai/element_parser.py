@@ -8,7 +8,7 @@ from comrade.lib.nhentai.regex import (
     IMAGES_URL_REGEX,
     TAGS_REGEX,
 )
-from comrade.lib.nhentai.urls import IMAGE_LINK_BASE
+from comrade.lib.nhentai.sources import IMAGE_LINK_BASE
 
 
 def get_gallery_id_from_cover_block(block: bs4.Tag) -> int:

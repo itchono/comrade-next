@@ -73,8 +73,6 @@ class SoundboardBackend:
         """
         collection = self.bot.db.soundboardSounds
 
-        print(ctx.guild_id, ctx.author_id, name)
-
         result = collection.delete_one(
             {"guild_id": ctx.guild_id, "name": name, "author_id": ctx.author_id}
         )
