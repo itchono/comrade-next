@@ -2,11 +2,22 @@ import pytest
 from interactions.api.events import MessageCreate
 
 from comrade.core.comrade_client import Comrade
+from comrade.lib.nhentai import search as nh_search
+from comrade.lib.nhentai.proxies import NHentaiSource, NHentaiWebProxy
 from comrade.lib.testing_utils import (
     CapturingContext,
     wait_for_message_or_fetch,
 )
 from comrade.modules.nhentai_cmds import NHentai
+
+
+@pytest.fixture(scope="module")
+def blocked_sources() -> list[NHentaiSource]:
+    """
+    Source which will be blocked by Cloudflare
+    """
+    # Make it a webproxy so that it can be used for searches as well
+    return [NHentaiWebProxy("NHentai", "https://nhentai.net")]
 
 
 @pytest.fixture(scope="module")
@@ -111,3 +122,33 @@ async def test_gallery_end(offline_ctx: CapturingContext, nhentai_ext: NHentai):
         == "This button was probably created in the past, and its session"
         " has expired. Please start a new NHentai session."
     )
+
+
+@pytest.mark.bot
+async def test_gallery_not_exist(
+    offline_ctx: CapturingContext, nhentai_ext: NHentai
+):
+    # Verify that gallery "-1" does not exists and sends an error message
+    await nhentai_ext.nhentai_gallery.callback(offline_ctx, -1)
+
+    msg = offline_ctx.captured_message
+    assert msg.content == "Gallery `-1` was not found."
+
+
+@pytest.mark.bot
+async def test_bad_proxy(
+    offline_ctx: CapturingContext,
+    nhentai_ext: NHentai,
+    blocked_sources: list[NHentaiSource],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    with monkeypatch.context() as m:
+        m.setattr(nh_search, "ORDERED_SOURCES", blocked_sources)
+
+        await nhentai_ext.nhentai_gallery.callback(offline_ctx, 266745)
+
+        msg = offline_ctx.captured_message
+        assert (
+            msg.content
+            == "No NHentai proxies returned a valid response (bot was defeated by anti-bot mechanisms)"
+        )

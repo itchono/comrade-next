@@ -218,6 +218,21 @@ class NHentaiSearchResult:
         )
 
 
+class NHentaiSortOrder(StrEnum):
+    RECENT = ""
+    POPULAR_TODAY = "&sort=popular-today"
+    POPULAR_WEEK = "&sort=popular-week"
+    POPULAR_ALL_TIME = "&sort=popular"
+
+    @property
+    def pretty_name(self) -> str:
+        return self.name.replace("_", " ").title()
+
+    @classmethod
+    async def convert(cls, ctx, argument: str):
+        return cls(argument)
+
+
 @dataclass
 class NHentaiSearchSession:
     """
@@ -232,11 +247,14 @@ class NHentaiSearchSession:
         Mapping to search results pages.
     maximum_pages : int
         The maximum number of pages available in the query
+    sort_order : NHentaiSortOrder
+        The sort order of the search results.
     """
 
     query: str
     results_pages: dict[int, NHentaiSearchResult]
     maximum_pages: int
+    sort_order: NHentaiSortOrder
 
 
 class InvalidProxyError(Exception):
@@ -245,18 +263,3 @@ class InvalidProxyError(Exception):
 
 class PageParsingError(Exception):
     pass
-
-
-class NHentaiSortOrder(StrEnum):
-    RECENT = ""
-    POPULAR_TODAY = "&sort=popular-today"
-    POPULAR_WEEK = "&sort=popular-week"
-    POPULAR_ALL_TIME = "&sort=popular"
-
-    @property
-    def pretty_name(self) -> str:
-        return self.name.replace("_", " ").title()
-
-    @classmethod
-    async def convert(cls, ctx, argument: str):
-        return cls(argument)

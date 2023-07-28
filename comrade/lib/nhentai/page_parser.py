@@ -220,10 +220,6 @@ def parse_maximum_search_pages(page: NHentaiWebPage) -> int:
         # So the current page number is the maximum page number
         current_page_tag = pagination_section.find("a", class_="page current")
 
-        if current_page_tag is None:
-            # This should not happen
-            raise PageParsingError("Parsing failed for search page.")
-
         return int(current_page_tag.text)
 
     # Otherwise, we can extract the maximum page number from the last page tag

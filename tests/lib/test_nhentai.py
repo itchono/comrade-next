@@ -1,18 +1,40 @@
 import aiohttp
 import pytest
 
+from comrade.lib.nhentai import search as nh_search
 from comrade.lib.nhentai.page_parser import (
     parse_gallery_from_page,
     parse_maximum_search_pages,
     parse_search_result_from_page,
 )
+from comrade.lib.nhentai.proxies import (
+    GoogleTranslateProxy,
+    NHentaiSource,
+    NHentaiWebProxy,
+)
 from comrade.lib.nhentai.search import get_gallery_page, get_search_page
 from comrade.lib.nhentai.structures import (
     InvalidProxyError,
     NHentaiGallerySession,
+    NHentaiSortOrder,
     PageParsingError,
 )
 from comrade.lib.nhentai.text_filters import filter_title_text
+
+
+@pytest.fixture(scope="module")
+def blocked_sources() -> list[NHentaiSource]:
+    """
+    Source which will be blocked by Cloudflare
+    """
+    # Make it a webproxy so that it can be used for searches as well
+    return [
+        NHentaiWebProxy("NHentai", "https://nhentai.net"),
+        GoogleTranslateProxy(
+            "Google Translate Proxy",
+            "http://translate.google.com/translate?sl=ja&tl=en&u=https://nhentai.net",
+        ),
+    ]
 
 
 @pytest.mark.parametrize(
@@ -71,6 +93,19 @@ def test_title_parser_fallback():
     bad_title = "(string) (with) (no) (title)"
 
     assert filter_title_text(bad_title) == bad_title
+
+
+@pytest.mark.parametrize(
+    ("input", "expectation"),
+    (
+        ("", NHentaiSortOrder.RECENT),
+        ("&sort=popular", NHentaiSortOrder.POPULAR_ALL_TIME),
+    ),
+)
+async def test_sortorder_enum_conversion(
+    input: str, expectation: NHentaiSortOrder
+):
+    assert (await NHentaiSortOrder.convert(None, input)) == expectation
 
 
 @pytest.mark.online
@@ -134,7 +169,7 @@ async def test_not_present_anywhere(http_session: aiohttp.ClientSession):
     """
     gallery_id = -1
 
-    with pytest.raises((PageParsingError, InvalidProxyError)):
+    with pytest.raises(PageParsingError):
         await get_gallery_page(gallery_id, http_session)
 
 
@@ -178,7 +213,9 @@ async def test_search_nominal(http_session: aiohttp.ClientSession, query: str):
     """
     Based on user cases that resulted in bugs previously
     """
-    page = await get_search_page(query, 1, http_session)
+    page = await get_search_page(
+        query, 1, http_session, NHentaiSortOrder.RECENT
+    )
     num_pages = parse_maximum_search_pages(page)
     assert num_pages > 0
 
@@ -198,11 +235,15 @@ async def test_search_last_page(http_session: aiohttp.ClientSession):
     """
     search_query = "alp love live"
 
-    first_page = await get_search_page(search_query, 1, http_session)
+    first_page = await get_search_page(
+        search_query, 1, http_session, NHentaiSortOrder.POPULAR_ALL_TIME
+    )
 
     num_pages = parse_maximum_search_pages(first_page)
 
-    last_page = await get_search_page(search_query, num_pages, http_session)
+    last_page = await get_search_page(
+        search_query, num_pages, http_session, NHentaiSortOrder.POPULAR_ALL_TIME
+    )
     search_result = parse_search_result_from_page(last_page)
 
     # access all @property to ensure that they are not broken
@@ -214,5 +255,42 @@ async def test_search_last_page(http_session: aiohttp.ClientSession):
 async def test_search_negative(http_session: aiohttp.ClientSession):
     search_query = "this should not exist"
 
-    with pytest.raises((PageParsingError, InvalidProxyError)):
-        await get_search_page(search_query, 1, http_session)
+    with pytest.raises(PageParsingError):
+        await get_search_page(
+            search_query, 1, http_session, NHentaiSortOrder.RECENT
+        )
+
+
+@pytest.mark.online
+async def test_bad_proxy_gallery(
+    http_session: aiohttp.ClientSession,
+    monkeypatch: pytest.MonkeyPatch,
+    blocked_sources: list[NHentaiSource],
+):
+    """
+    Verify that a bad proxy raises an InvalidProxyError
+    """
+    gallery_id = 185217
+
+    with monkeypatch.context() as m:
+        m.setattr(nh_search, "ORDERED_SOURCES", blocked_sources)
+        with pytest.raises(InvalidProxyError):
+            await get_gallery_page(gallery_id, http_session)
+
+
+@pytest.mark.online
+async def test_bad_proxy_search(
+    http_session: aiohttp.ClientSession,
+    monkeypatch: pytest.MonkeyPatch,
+    blocked_sources: list[NHentaiSource],
+):
+    """
+    Verify that a bad proxy raises an InvalidProxyError
+    """
+
+    with monkeypatch.context() as m:
+        m.setattr(nh_search, "ORDERED_SOURCES", blocked_sources)
+        with pytest.raises(InvalidProxyError):
+            await get_search_page(
+                "alp love live", 1, http_session, NHentaiSortOrder.RECENT
+            )

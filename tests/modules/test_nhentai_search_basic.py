@@ -5,11 +5,22 @@ from interactions import (
 )
 
 from comrade.core.comrade_client import Comrade
+from comrade.lib.nhentai import search as nh_search
+from comrade.lib.nhentai.proxies import NHentaiSource, NHentaiWebProxy
 from comrade.lib.nhentai.structures import NHentaiSortOrder
 from comrade.lib.testing_utils import (
     CapturingContext,
 )
 from comrade.modules.nhentai_cmds import NHentai
+
+
+@pytest.fixture(scope="module")
+def blocked_sources() -> list[NHentaiSource]:
+    """
+    Source which will be blocked by Cloudflare
+    """
+    # Make it a webproxy so that it can be used for searches as well
+    return [NHentaiWebProxy("NHentai", "https://nhentai.net")]
 
 
 @pytest.fixture(scope="module")
@@ -80,3 +91,41 @@ async def test_search_click(
     assert start_embed.title == "Kurosawa no Kyuujitsu | Kurosawa's Day Off"
     assert start_embed.url == "https://nhentai.net/g/388445/"
     assert start_embed.footer.text == "Found using nhentai.to Mirror"
+
+
+@pytest.mark.bot
+async def test_search_negative(
+    offline_ctx: CapturingContext, nhentai_ext: NHentai
+):
+    query = "this should not exist"
+
+    await nhentai_ext.nhentai_search.callback(
+        offline_ctx, query, NHentaiSortOrder.POPULAR_ALL_TIME
+    )
+
+    start_msg = offline_ctx.captured_message
+    assert start_msg.content == (
+        "No results found for query `this should not exist`."
+    )
+
+
+@pytest.mark.bot
+async def test_search_bad_proxy(
+    offline_ctx: CapturingContext,
+    nhentai_ext: NHentai,
+    blocked_sources: list[NHentaiSource],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    with monkeypatch.context() as m:
+        m.setattr(nh_search, "ORDERED_SOURCES", blocked_sources)
+
+        await nhentai_ext.nhentai_search.callback(
+            offline_ctx,
+            "alp love live english",
+            NHentaiSortOrder.POPULAR_ALL_TIME,
+        )
+
+        start_msg = offline_ctx.captured_message
+        assert start_msg.content == (
+            "No NHentai proxies returned a valid response (bot was defeated by anti-bot mechanisms)"
+        )
