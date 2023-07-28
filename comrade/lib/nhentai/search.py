@@ -47,19 +47,13 @@ async def get_gallery_page(
         If the proxy itself is invalid.
     PageParsingError
         If the gallery itself is invalid.
-    aiohttp.ClientResponseError
-        If the proxy returns a non-200 response, e.g. internet is down
     """
     exception_frame: Exception = None
 
     logger.info(f"Retrieving gallery page for {gallery_num}")
 
     for proxy in ORDERED_SOURCES:
-        try:
-            html = await proxy.retrieve_gallery_page(http_session, gallery_num)
-        except aiohttp.ClientResponseError as e:
-            exception_frame = e
-            continue
+        html = await proxy.retrieve_gallery_page(http_session, gallery_num)
 
         soup = bs4.BeautifulSoup(
             html, "lxml"
@@ -83,7 +77,7 @@ async def get_search_page(
     search_query: str,
     pagenum: int,
     http_session: aiohttp.ClientSession,
-    sort_order: NHentaiSortOrder = NHentaiSortOrder.RECENT,
+    sort_order: NHentaiSortOrder,
 ) -> NHentaiWebPage:
     """
     Gets the HTML content of the NHentai search page, given
@@ -101,7 +95,7 @@ async def get_search_page(
     http_session : aiohttp.ClientSession
         The aiohttp ClientSession to use for the request.
     sort_order : NHentaiSortOrder
-        The sort order to use for the search page, default recent
+        The sort order to use for the search page
 
     Returns
     -------
@@ -120,13 +114,9 @@ async def get_search_page(
         if not isinstance(proxy, NHentaiWebProxy):
             continue
 
-        try:
-            html = await proxy.retrieve_search_page(
-                http_session, search_query, pagenum, sort_order
-            )
-        except aiohttp.ClientResponseError as e:
-            exception_frame = e
-            continue
+        html = await proxy.retrieve_search_page(
+            http_session, search_query, pagenum, sort_order
+        )
 
         soup = bs4.BeautifulSoup(
             html, "lxml"
@@ -136,6 +126,7 @@ async def get_search_page(
             raise_for_search_soup(soup)
         except (InvalidProxyError, PageParsingError) as e:
             exception_frame = e
+
             logger.warning(f"Proxy {proxy.name} failed: {e}")
             continue
         else:

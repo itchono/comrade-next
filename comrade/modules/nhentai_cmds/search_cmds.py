@@ -1,7 +1,6 @@
 import re
 from typing import Awaitable, Callable
 
-from aiohttp import ClientResponseError
 from interactions import (
     SELECT_MAX_NAME_LENGTH,
     ActionRow,
@@ -71,12 +70,10 @@ class NHSearchHandler(NHGalleryInit):
             )
         except InvalidProxyError:
             return await ctx.send(
-                "No NHentai proxies returned a valid response"
+                "No NHentai proxies returned a valid response (bot was defeated by anti-bot mechanisms)"
             )
         except PageParsingError:
             return await ctx.send(f"No results found for query `{query}`.")
-        except ClientResponseError:
-            return await ctx.send("HTTP requests to proxies failed.")
 
         nh_search_result = parse_search_result_from_page(page)
 
@@ -86,6 +83,7 @@ class NHSearchHandler(NHGalleryInit):
             query,
             {1: nh_search_result},
             maximum_num_pages,
+            sort_order,
         )
 
         self.search_sessions[ctx] = nh_search_session
@@ -145,7 +143,10 @@ class NHSearchHandler(NHGalleryInit):
             """
             # Get the page
             page = await get_search_page(
-                search_session.query, page_num, self.bot.http_session
+                search_session.query,
+                page_num,
+                self.bot.http_session,
+                search_session.sort_order,
             )
             nh_search_result = parse_search_result_from_page(page)
             search_session.results_pages[page_num] = nh_search_result
