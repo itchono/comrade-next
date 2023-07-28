@@ -11,17 +11,36 @@ from comrade.lib.nhentai.element_parser import (
     get_tags_from_a_blocks,
 )
 from comrade.lib.nhentai.structures import (
+    InvalidProxyError,
     NHentaiGallery,
     NHentaiSearchResult,
     NHentaiWebPage,
-    NoSearchResultsError,
+    PageParsingError,
 )
 
 
-def is_valid_gallery_soup(soup: bs4.BeautifulSoup) -> bool:
+def _raise_for_proxy_soup(soup: bs4.BeautifulSoup):
     """
-    Returns true if the HTML content of the page represents
-    a valid NHentai gallery (i.e. no Cloudflare error page)
+    Raises an exception if it looks like the soup
+    represents a page blocked by Cloudflare.
+    """
+    meta_tags = soup.find_all("meta")
+
+    if len(meta_tags) < 3:
+        raise InvalidProxyError("Proxy did not return a valid gallery page")
+
+    if "Just a moment" in soup.text:
+        raise InvalidProxyError("Proxy is blocked by Cloudflare")
+
+
+def raise_for_gallery_soup(soup: bs4.BeautifulSoup):
+    """
+    Raises an exception if the HTML content of the page does not represent
+    a valid NHentai gallery (i.e. Cloudflare error page).
+
+    Two cases are checked for:
+    1. the proxy itself is invalid e.g. blocked by Cloudflare
+    2. the gallery itself is invalid e.g. 404
 
     We check for the presence of the <meta> tags describing gallery title, etc.
 
@@ -35,61 +54,55 @@ def is_valid_gallery_soup(soup: bs4.BeautifulSoup) -> bool:
     soup : bs4.BeautifulSoup
         The BeautifulSoup object representing the HTML content of the page.
 
-    Returns
-    -------
-    bool
-        True if the page is a valid NHentai gallery, False otherwise.
+    Raises
+    ------
+    InvalidProxyError
+        If the proxy itself is invalid.
+    PageParsingError
+        If the gallery itself is invalid.
     """
-    meta_tags = soup.find_all("meta")
+    _raise_for_proxy_soup(soup)
 
-    if len(meta_tags) < 3:
-        return False
-
-    if "Just a moment" in soup.text:
-        return False
+    # Yandex-specific
+    if "Unable to translate page" in soup.text:
+        raise PageParsingError("Gallery does not exist")
 
     # Gallery-specific -- gallery not found
     if "404 - Not Found" in soup.title.text:
-        return False
-
-    return True
+        raise PageParsingError("Gallery does not exist")
 
 
-def is_valid_search_soup(soup: bs4.BeautifulSoup) -> bool:
+def raise_for_search_soup(soup: bs4.BeautifulSoup) -> bool:
     """
-    Returns true if the HTML content of the page represents
-    a valid NHentai search page (i.e. no Cloudflare error page,
-    and results are found)
+    Raises an exception if the HTML content of the page does not represent
+    a valid NHentai search page (i.e. Cloudflare error page).
+
+    Checks for two cases:
+    1. the proxy itself is invalid e.g. blocked by Cloudflare
+    2. the search itself is invalid e.g. no results found
     """
-    meta_tags = soup.find_all("meta")
+    _raise_for_proxy_soup(soup)
 
-    if len(meta_tags) < 3:
-        return False
-
-    if "Just a moment" in soup.text:
-        return False
-
-    return True
-
-
-def has_search_results_soup(soup: bs4.BeautifulSoup) -> bool:
-    """
-    Returns true if the page contains at least 1 valid search result.
-
-    Used to check if the search query returned any results.
-    """
     negative_results = ["No results found", "0 Results"]
 
     for result in negative_results:
         if result in soup.text:
-            return False
-
-    return True
+            raise PageParsingError("No results found for search query")
 
 
 def parse_gallery_from_page(page: NHentaiWebPage) -> NHentaiGallery:
     """
     Returns an NHentaiGallery object from the given page.
+
+    Parameters
+    ----------
+    page : NHentaiWebPage
+        The page to extract the gallery from.
+
+    Returns
+    -------
+    NHentaiGallery
+        The gallery.
     """
     soup = page.soup
 
@@ -142,9 +155,6 @@ def parse_search_result_from_page(page: NHentaiWebPage) -> NHentaiSearchResult:
     """
     soup = page.soup
 
-    if not has_search_results_soup(soup):
-        raise NoSearchResultsError("No search results found.")
-
     # Find the search results container
     search_results_div = soup.find("div", id="content")
 
@@ -193,10 +203,6 @@ def parse_maximum_search_pages(page: NHentaiWebPage) -> int:
     """
 
     soup = page.soup
-
-    if not has_search_results_soup(soup):
-        raise NoSearchResultsError("No search results found.")
-
     # Try to find the pagination section
     # If it doesn't exist, then there is only one page
     if (
@@ -213,6 +219,11 @@ def parse_maximum_search_pages(page: NHentaiWebPage) -> int:
         # This means we are already on the last page
         # So the current page number is the maximum page number
         current_page_tag = pagination_section.find("a", class_="page current")
+
+        if current_page_tag is None:
+            # This should not happen
+            raise PageParsingError("Parsing failed for search page.")
+
         return int(current_page_tag.text)
 
     # Otherwise, we can extract the maximum page number from the last page tag

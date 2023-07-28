@@ -239,11 +239,11 @@ class NHentaiSearchSession:
     maximum_pages: int
 
 
-class NoPageFoundError(Exception):
+class InvalidProxyError(Exception):
     pass
 
 
-class NoSearchResultsError(Exception):
+class PageParsingError(Exception):
     pass
 
 

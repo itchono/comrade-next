@@ -1,5 +1,6 @@
 import asyncio
 
+from aiohttp import ClientResponseError
 from interactions import (
     SlashContext,
 )
@@ -9,7 +10,9 @@ from comrade.lib.nhentai.page_parser import (
 )
 from comrade.lib.nhentai.search import get_gallery_page
 from comrade.lib.nhentai.structures import (
+    InvalidProxyError,
     NHentaiGallerySession,
+    PageParsingError,
 )
 
 from .cacher import NHCacher
@@ -34,7 +37,17 @@ class NHGalleryInit(NHCacher):
         send_embed: bool
             Whether or not to send the start embed
         """
-        page = await get_gallery_page(gallery_id, self.bot.http_session)
+        try:
+            page = await get_gallery_page(gallery_id, self.bot.http_session)
+        except InvalidProxyError:
+            return await ctx.send(
+                "No NHentai proxies returned a valid response"
+            )
+        except PageParsingError:
+            return await ctx.send(f"Gallery `{gallery_id}` was not found.")
+        except ClientResponseError:
+            return await ctx.send("HTTP requests to proxies failed.")
+
         nh_gallery = parse_gallery_from_page(page)
 
         session = NHentaiGallerySession(nh_gallery)
