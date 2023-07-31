@@ -12,7 +12,7 @@ ORDERED_SOURCES: list[NHentaiSource] = [
     NHentaiMirror("nhentai.uk Mirror", "https://nhentai.uk"),
     NHentaiWebProxy(
         "Yandex Proxy",
-        "https://translated.turbopages.org/proxy_u/ru-en.en.63e09291-64c406b5-1259c722-74722d776562/https/nhentai.net",
+        "https://translated.turbopages.org/proxy_u/ru-en.en.0a146d8f-64c84397-abe180e7-74722d776562/https/nhentai.net",
     ),
     # These two don't work
     # GoogleTranslateProxy(
