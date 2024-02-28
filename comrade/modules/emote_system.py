@@ -78,7 +78,7 @@ class EmoteSystem(Extension):
             if emote.type == "big":
                 await echo(msg.channel, msg.author, content=emote.URL)
             elif emote.type == "inline":
-                return
+                await echo(msg.channel, msg.author, content=emote.URL)  # HOTPATCH FOR EMOTE SYSTEM PROBLEMS
 
 
 def setup(bot):
